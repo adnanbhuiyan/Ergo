@@ -1,6 +1,5 @@
 # Ergo
 
-<div align="center">
   
 
 <!-- About the Project -->
