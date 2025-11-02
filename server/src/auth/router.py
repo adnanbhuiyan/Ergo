@@ -9,7 +9,8 @@ auth_router = APIRouter(
 @auth_router.post("/signup", status_code=status.HTTP_201_CREATED)
 def create_user(user: UserSignup):
     """
-        Signs up a user using Supabase and then stores the user's profile into a database 
+        Signs up a user using Supabase and then stores the user's profile into the Supabase userprofile table.
+        Returns the user's profile information. 
     """
     user_data = signup_user(user)
     if "error" in user_data:
@@ -28,6 +29,9 @@ def create_user(user: UserSignup):
 
 @auth_router.post("/login")
 def login_user(user: UserLogin):
+    """
+        Logs in a user using Supabase and returns both the user's profile and their session data which includes their JWT
+    """
     user_data = signin_user(user)
 
     if "error" in user_data:

@@ -4,6 +4,9 @@ from src.auth.schemas import UserBase, UserSignup, UserLogin, UserLoggedIn
 from supabase_auth.errors import AuthApiError
 
 def signup_user(user: UserSignup):
+    """
+        Signs up a user through Supabase if an account with their email does not exist and then adds that user to the userprofile table
+    """
     try:
         response = supabase.auth.sign_up(
             {
@@ -27,6 +30,9 @@ def signup_user(user: UserSignup):
     
 
 def signin_user(user: UserLogin):
+    """
+        Signs in a user through Supabase and returns their user profile and session data which includes their JWT
+    """
     try:
         response = supabase.auth.sign_in_with_password(
             {

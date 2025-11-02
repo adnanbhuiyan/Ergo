@@ -4,13 +4,19 @@ import uuid
 
 
 class UserBase(BaseModel):
-    email: EmailStr
+    """
+        Base model for the user
+    """
+    email: EmailStr 
     first_name: str 
     last_name: str 
     username: str 
     position: str 
 
 class UserSignup(UserBase):
+    """
+        The model used when the user is signing up (includes password)
+    """
     password: str 
     @field_validator("password")
     def password_validator(cls, value: str) -> str:
@@ -33,12 +39,42 @@ class UserSignup(UserBase):
         # Check for at least one special character
         if not re.search(r"[@$!%*?&]", value):
             raise ValueError("Password must contain at least one special character from the following: @$!%*?&")
-            
+    
         return value
+    
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "email": "testuser@gmail.com",
+                    "first_name": "Joe",
+                    "last_name": "Sanchez",
+                    "username": "TestUser",
+                    "position": "CDAIO",
+                    "password": "TestPass123$"
+                }
+            ]
+        }
+    }    
+
 
 class UserLogin(BaseModel):
+    """
+        The model that is used when the user is logging in (only contains email and password)
+    """
     email: EmailStr
     password: str 
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "email": "testuser@gmail.com",
+                    "password": "TestPass123$"
+                }
+            ]
+        }
+    }    
 
 class UserLoggedIn(UserBase):
     id: uuid.UUID
