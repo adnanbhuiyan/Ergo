@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException
 from src.auth.schemas import UserBase, UserSignup, UserLogin, UserLoggedIn
-from src.auth.service import signup_user
+from src.auth.service import signup_user, signin_user
 
 auth_router = APIRouter(
     prefix="/auth"
@@ -26,9 +26,18 @@ def create_user(user: UserSignup):
     return user_data["user_profile"]
 
 
-@auth_router.get("/login")
-def login_user():
-    return
+@auth_router.post("/login")
+def login_user(user: UserLogin):
+    user_data = signin_user(user)
+
+    if "error" in user_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=user_data["error"],
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    return user_data["data"]
 
 @auth_router.get("/logout")
 def logout_user():
