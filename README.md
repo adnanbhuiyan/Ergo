@@ -80,11 +80,29 @@ From a bash terminal run the following (ensure you are in the server directory f
    
 The project will run in the following URL: http://localhost:8000/ 
 
-### 
+### How to Send POST Request to Signup Backend Route 
+From the ReactJS frontend, you can send a POST request to the http://localhost:8000/auth/signup route with a JavaScript object in the Body:
+'''
+  const signup_example = {
+    email: "testuser@gmail.com",
+    first_name: "Joe",
+    last_name: "Sanchez",
+    username: "TestUser",
+    position: "CDAIO",
+    password: "TestPass123$"
+  }
 
+'''
 
+### How to Send POST Request to Login Backend Route 
+From the ReactJS frontend, you can send a POST request to the http://localhost:8000/auth/login route with a JavaScript object in the Body:
+'''
+  const login_example = {
+    email: "testuser@gmail.com",
+    password: "TestPass123$"
+  }
 
-
+'''
 
 
 
