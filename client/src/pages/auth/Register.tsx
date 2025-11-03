@@ -1,0 +1,228 @@
+import { useState } from "react";
+
+const Register = () => {
+  // Set state variables for input fields
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
+  const [position, setPosition] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Used for button disable state and for loading text
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    //
+    e.preventDefault(); // Prevents page from reloading
+    setError("");
+    setIsLoading(true); // Show loading state
+    try {
+      const response = await fetch("http://localhost:8000/auth/signup", {
+        // Making post request to the FastAPI endpoint
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          // Convert data to JSON
+          email,
+          password,
+          first_name: firstName, // converting camelCase to snake case
+          last_name: lastName,
+          username,
+          position,
+        }),
+      });
+
+      const data = await response.json(); // parse the JSON response from server
+
+      if (!response.ok) {
+        // Extra error handling by extracting error message from backend
+        setError(data.detail || "Registration failed");
+        setIsLoading(false);
+        return; // exit early
+      }
+
+      // Clear the form fields after form is successfully submitted
+      setEmail("");
+      setPassword("");
+      setFirstName("");
+      setLastName("");
+      setUsername("");
+      setPosition("");
+    } catch {
+      // Catch any error
+      setError("Network error. Please try again");
+    } finally {
+      // make sure loading state is turned off no matter what
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="h-screen w-screen flex">
+      {/* Left Column displaying 'Ergo' and Promotion */}
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-600 flex-col justify-center items-center p-8">
+        <h1 className="text-6xl font-bold text-white mb-8">Ergo</h1>
+        <p className="text-white text-lg text-center leading-relaxed max-w-md">
+          Sign up to start your day and get your tasks organized, boost
+          productivity, and turn everyday chaos into effortless clarity.
+        </p>
+      </div>
+
+      {/* Right Column displaying the Registration Form */}
+      <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+            Create Account
+          </h2>
+          <p className="text-gray-600 mb-6">Sign up to get started</p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name Fields */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div className="flex-1">
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 ocus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Username Field */}
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            {/* Position Field */}
+            <div>
+              <label
+                htmlFor="position"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Position
+              </label>
+              <input
+                id="position"
+                type="text"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Software Engineer"
+                required
+              />
+            </div>
+
+            {/* Email Field */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Must be 8+ characters with uppercase, lowercase, number, and
+                special character (@$!%*?&)
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-gray-900 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Creating account..." : "Sign Up"}
+            </button>
+          </form>
+
+          {/* Login Link */}
+          <p className="text-center text-sm text-gray-600 mt-6">
+            Already have an account?{" "}
+            <a
+              href="/login"
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Sign In
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;
