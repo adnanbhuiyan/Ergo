@@ -8,14 +8,65 @@ export const Route = createFileRoute('/login')({
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log('Login attempt:', { email, password })
-  }
+    setError('')
+    setSuccess('')
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch('http://localhost:8000/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      })
 
-	// Social login removed for now
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.detail || 'Login failed')
+        setIsLoading(false)
+        return
+      }
+
+      // Store session data in localStorage
+      if (data.session_data) {
+        localStorage.setItem('session_token', data.session_data.access_token)
+        localStorage.setItem('user_id', data.user_profile?.id || '')
+        localStorage.setItem('user_email', data.user_profile?.email || email)
+      }
+      
+      // Log full response for debugging
+      console.log('✅ Login successful!')
+      console.log('Session data:', data.session_data)
+      console.log('User profile:', data.user_profile)
+      
+      // Show success message
+      setSuccess(`Welcome back, ${data.user_profile?.first_name || email}!`)
+      
+      // Clear form fields after successful login
+      setEmail('')
+      setPassword('')
+      
+      // TODO: Redirect to dashboard or home page after successful login
+      // Example: navigate('/dashboard')
+      
+    } catch (err) {
+      setError('Network error. Please try again.')
+      console.error('Login error:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="h-screen w-screen flex">
@@ -32,6 +83,18 @@ function Login() {
         <div className="w-full max-w-md">
           <h2 className="text-2xl font-semibold text-gray-800 mb-8">Log In Below</h2>
           
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+              {success}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
@@ -70,9 +133,10 @@ function Login() {
             {/* Enter/Submit Button */}
             <button
               type="submit"
-              className="w-full px-4 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors duration-200"
+              disabled={isLoading}
+              className="w-full px-4 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
             >
-              Enter
+              {isLoading ? 'Logging in...' : 'Enter'}
             </button>
           </form>
 
