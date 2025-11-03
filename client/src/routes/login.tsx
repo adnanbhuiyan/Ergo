@@ -1,6 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
+import { createFileRoute } from '@tanstack/react-router'
 
-const Login = () => {
+export const Route = createFileRoute('/login')({
+  component: Login,
+})
+
+function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 

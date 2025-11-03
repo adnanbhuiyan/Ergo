@@ -1,6 +1,12 @@
 import { useState } from "react";
+import { createFileRoute } from '@tanstack/react-router';
 
-const Register = () => {
+export const Route = createFileRoute('/register')({
+  component: Register,
+})
+
+
+function Register () {
   // Set state variables for input fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
