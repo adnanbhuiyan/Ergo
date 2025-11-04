@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { createFileRoute } from '@tanstack/react-router';
-
+import { Button } from "@/components/ui/button";
+interface File { }
 export const Route = createFileRoute('/register')({
   component: Register,
 })
 
 
-function Register () {
+function Register() {
   // Set state variables for input fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +16,7 @@ function Register () {
   const [username, setUsername] = useState("");
   const [position, setPosition] = useState("");
   const [error, setError] = useState("");
+  const [profilePicture, setProfilePicture] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false); // Used for button disable state and for loading text
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -56,6 +58,7 @@ function Register () {
       setLastName("");
       setUsername("");
       setPosition("");
+      setProfilePicture(null)
     } catch {
       // Catch any error
       setError("Network error. Please try again");
@@ -164,6 +167,25 @@ function Register () {
               />
             </div>
 
+            {/* Profile Picture Field */}
+            <div>
+              <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-700 mb-1">
+                Profile Picture (Optional)
+              </label>
+              <input type="file" accept="image/*" onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setProfilePicture(e.target.files[0])
+                }
+              }} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-blue-500 focus:border-transparent"></input>
+              <p className="text-xs text-gray-500 mt-1">Optional. PNG, or JPG. Max 5MB</p>
+              {profilePicture && (
+                <div className="mt-3 flex items-center gap-3">
+                  <img src={profilePicture ? URL.createObjectURL(profilePicture as Blob) : ''} alt="Profile Preview" className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"></img>
+                  <Button variant="outline" type="button" className=" text-white hover:text-white" onClick={() => setProfilePicture(null)}>Remove</Button>
+                </div>
+              )}
+            </div>
+
             {/* Email Field */}
             <div>
               <label
@@ -209,7 +231,7 @@ function Register () {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-gray-900 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 py-2 px-4 rounded-lg text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
             >
               {isLoading ? "Creating account..." : "Sign Up"}
             </button>
