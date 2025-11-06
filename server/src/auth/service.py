@@ -16,6 +16,7 @@ def signup_user(user: UserSignup):
         )
  
         if response.user and response.session:
+            print(user)
             user_profile = user.model_dump(exclude={"password, profile_photo"})
             user_profile["id"] = response.user.id
 

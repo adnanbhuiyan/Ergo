@@ -14,6 +14,8 @@ class UserBase(BaseModel):
     last_name: str 
     username: str 
     position: str 
+    profile_photo: str
+
 
 class UserSignup(UserBase):
     """
@@ -43,9 +45,7 @@ class UserSignup(UserBase):
             raise ValueError("Password must contain at least one special character from the following: @$!%*?&")
     
         return value
-    
-    profile_photo: Annotated[UploadFile, File()]
-    
+        
     model_config = {
         "json_schema_extra": {
             "examples": [

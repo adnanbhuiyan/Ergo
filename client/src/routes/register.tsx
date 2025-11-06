@@ -19,6 +19,12 @@ function Register() {
   const [profilePicture, setProfilePicture] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false); // Used for button disable state and for loading text
 
+  interface FastAPIValidationError {
+    loc: (string | number)[];
+    msg: string;
+    type: string;
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     //
     e.preventDefault(); // Prevents page from reloading
@@ -39,17 +45,32 @@ function Register() {
           last_name: lastName,
           username,
           position,
+          profile_photo: profilePicture
         }),
       });
 
       const data = await response.json(); // parse the JSON response from server
 
       if (!response.ok) {
-        // Extra error handling by extracting error message from backend
-        setError(data.detail || "Registration failed");
-        setIsLoading(false);
-        return; // exit early
-      }
+  let errorMessage = "Registration failed. Please check your inputs.";
+  
+  const errorData: { detail?: FastAPIValidationError[] | string } = data;
+
+  if (errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+    errorMessage = errorData.detail.map((err: FastAPIValidationError) => {
+      const field = err.loc[err.loc.length - 1]; // Get the field name
+      return `${field}: ${err.msg}`;
+    }).join('; ');
+
+  } 
+    else if (typeof errorData.detail === 'string') {
+      errorMessage = errorData.detail;
+    }
+  
+      setError(errorMessage);
+      setIsLoading(false);
+      return; 
+    }
 
       // Clear the form fields after form is successfully submitted
       setEmail("");
