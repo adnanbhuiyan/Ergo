@@ -16,8 +16,9 @@ def signup_user(user: UserSignup):
         )
  
         if response.user and response.session:
-            user_profile = user.model_dump(exclude={"password"})
+            user_profile = user.model_dump(exclude={"password, profile_photo"})
             user_profile["id"] = response.user.id
+
             print(user_profile)
             user_profile_response = supabase.table("userprofile").insert(user_profile).execute()
             return {"message": "User Signed Up Successfully", "user_profile": user_profile_response.data[0]}

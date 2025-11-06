@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
+from fastapi import UploadFile, File
+from typing import Annotated
 import re
 import uuid
 
@@ -42,6 +44,8 @@ class UserSignup(UserBase):
     
         return value
     
+    profile_photo: Annotated[UploadFile, File()]
+    
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -51,7 +55,8 @@ class UserSignup(UserBase):
                     "last_name": "Sanchez",
                     "username": "TestUser",
                     "position": "CDAIO",
-                    "password": "TestPass123$"
+                    "password": "TestPass123$",
+                    "profile_photo": "This is an Image File Passed from the ReactJS Frontend"
                 }
             ]
         }
