@@ -1,6 +1,4 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from fastapi import UploadFile, File
-from typing import Annotated
 import re
 import uuid
 
@@ -14,8 +12,6 @@ class UserBase(BaseModel):
     last_name: str 
     username: str 
     position: str 
-    profile_photo: str
-
 
 class UserSignup(UserBase):
     """
@@ -83,5 +79,7 @@ class UserLogin(BaseModel):
 
 class UserLoggedIn(UserBase):
     id: uuid.UUID
+    profile_photo: str 
+
 
 

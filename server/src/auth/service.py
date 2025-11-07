@@ -1,9 +1,10 @@
-from fastapi import HTTPException
+from fastapi import UploadFile
 from src.database import supabase
 from src.auth.schemas import UserBase, UserSignup, UserLogin, UserLoggedIn
 from supabase_auth.errors import AuthApiError
+from typing import Optional
 
-def signup_user(user: UserSignup):
+async def signup_user(user: UserSignup, profile_photo: Optional[UploadFile]):
     """
         Signs up a user through Supabase if an account with their email does not exist and then adds that user to the userprofile table
     """
@@ -17,9 +18,27 @@ def signup_user(user: UserSignup):
  
         if response.user and response.session:
             print(user)
-            user_profile = user.model_dump(exclude={"password, profile_photo"})
+            user_profile = user.model_dump(exclude={"password"})
             user_profile["id"] = response.user.id
+            profile_photo_url = supabase.storage.from_("ErgoProject").get_public_url("user_profile_pictures/default.png")
 
+            if profile_photo:
+                try:
+                    file_ext = profile_photo.filename.split(".")[-1]
+                    photo_path = f"user_profile_pictures/{response.user.id}.{file_ext}"
+                    photo_contents = await profile_photo.read()
+
+                    supabase.storage.from_("ErgoProject").upload(
+                        path=photo_path,
+                        file=photo_contents,
+                        file_options={"content-type": profile_photo.content_type, "upsert": "true"}
+                    )
+
+                    profile_photo_url = supabase.storage.from_("ErgoProject").get_public_url(photo_path)
+                except Exception as e:
+                    return {"error": str(e)}
+
+            user_profile["profile_photo_url"] = profile_photo_url 
             print(user_profile)
             user_profile_response = supabase.table("userprofile").insert(user_profile).execute()
             return {"message": "User Signed Up Successfully", "user_profile": user_profile_response.data[0]}

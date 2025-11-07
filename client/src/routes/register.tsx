@@ -30,23 +30,28 @@ function Register() {
     e.preventDefault(); // Prevents page from reloading
     setError("");
     setIsLoading(true); // Show loading state
+
+    const formData = new FormData();
+
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("first_name", firstName);
+    formData.append("last_name", lastName);
+    formData.append("username", username);
+    formData.append("position", position);
+
+    //Add profile photo if user uploads one
+    if (profilePicture) {
+      formData.append("profile_photo", profilePicture);
+    }
+
+
+
     try {
       const response = await fetch("http://localhost:8000/auth/signup", {
         // Making post request to the FastAPI endpoint
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          // Convert data to JSON
-          email,
-          password,
-          first_name: firstName, // converting camelCase to snake case
-          last_name: lastName,
-          username,
-          position,
-          profile_photo: profilePicture
-        }),
+        body: formData,
       });
 
       const data = await response.json(); // parse the JSON response from server

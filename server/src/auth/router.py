@@ -1,30 +1,59 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Form, File, UploadFile
 from src.auth.schemas import UserBase, UserSignup, UserLogin, UserLoggedIn
 from src.auth.service import signup_user, signin_user
+from typing import Optional
+from pydantic import ValidationError
 
 auth_router = APIRouter(
     prefix="/auth"
 )
 
 @auth_router.post("/signup", status_code=status.HTTP_201_CREATED)
-def create_user(user: UserSignup):
+async def create_user(
+    email: str = Form(...),
+    password: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    username: str = Form(...),
+    position: str = Form(...),
+    profile_photo: Optional[UploadFile] = File(None) 
+):
     """
         Signs up a user using Supabase and then stores the user's profile into the Supabase userprofile table.
         Returns the user's profile information. 
     """
-    user_data = signup_user(user)
-    if "error" in user_data:
-        if "User already registered" in user_data["error"]:
+
+    #Validate the user form data against the schema for the UserSignup
+    try:
+        user_signup_data = UserSignup(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            position=position
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=e.errors() 
+        )
+
+
+    complete_profile_data = await signup_user(user_signup_data, profile_photo)
+    
+    if "error" in complete_profile_data:
+        if "User already registered" in complete_profile_data["error"]:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=user_data["error"],
+                detail=complete_profile_data["error"],
             )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=user_data["error"],
+            detail=complete_profile_data["error"],
         ) 
 
-    return user_data["user_profile"]
+    return complete_profile_data["user_profile"]
 
 
 @auth_router.post("/login")
