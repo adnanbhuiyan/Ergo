@@ -42,7 +42,7 @@ function Register() {
 
     //Add profile photo if user uploads one
     if (profilePicture) {
-      formData.append("profile_photo", profilePicture);
+      formData.append("profile_photo", profilePicture as Blob);
     }
 
 
@@ -57,25 +57,25 @@ function Register() {
       const data = await response.json(); // parse the JSON response from server
 
       if (!response.ok) {
-  let errorMessage = "Registration failed. Please check your inputs.";
-  
-  const errorData: { detail?: FastAPIValidationError[] | string } = data;
+        let errorMessage = "Registration failed. Please check your inputs.";
 
-  if (errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
-    errorMessage = errorData.detail.map((err: FastAPIValidationError) => {
-      const field = err.loc[err.loc.length - 1]; // Get the field name
-      return `${field}: ${err.msg}`;
-    }).join('; ');
+        const errorData: { detail?: FastAPIValidationError[] | string } = data;
 
-  } 
-    else if (typeof errorData.detail === 'string') {
-      errorMessage = errorData.detail;
-    }
-  
-      setError(errorMessage);
-      setIsLoading(false);
-      return; 
-    }
+        if (errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+          errorMessage = errorData.detail.map((err: FastAPIValidationError) => {
+            const field = err.loc[err.loc.length - 1]; // Get the field name
+            return `${field}: ${err.msg}`;
+          }).join('; ');
+
+        }
+        else if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        }
+
+        setError(errorMessage);
+        setIsLoading(false);
+        return;
+      }
 
       // Clear the form fields after form is successfully submitted
       setEmail("");
