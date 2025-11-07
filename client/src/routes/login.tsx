@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/login')({
   component: Login,
@@ -17,7 +18,7 @@ function Login() {
     setError('')
     setSuccess('')
     setIsLoading(true)
-    
+
     try {
       const response = await fetch('http://localhost:8000/auth/login', {
         method: 'POST',
@@ -44,22 +45,24 @@ function Login() {
         localStorage.setItem('user_id', data.user_profile?.id || '')
         localStorage.setItem('user_email', data.user_profile?.email || email)
       }
-      
+
       // Log full response for debugging
       console.log('✅ Login successful!')
       console.log('Session data:', data.session_data)
       console.log('User profile:', data.user_profile)
-      
+
       // Show success message
       setSuccess(`Welcome back, ${data.user_profile?.first_name || email}!`)
-      
+
       // Clear form fields after successful login
       setEmail('')
       setPassword('')
-      
+
       // TODO: Redirect to dashboard or home page after successful login
       // Example: navigate('/dashboard')
-      
+      const navigate = useNavigate()
+      navigate({ to: "/dashboard" })
+
     } catch (err) {
       setError('Network error. Please try again.')
       console.error('Login error:', err)
@@ -82,13 +85,13 @@ function Login() {
       <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center px-8 py-12">
         <div className="w-full max-w-md">
           <h2 className="text-2xl font-semibold text-gray-800 mb-8">Log In Below</h2>
-          
+
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
               {error}
             </div>
           )}
-          
+
           {success && (
             <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
               {success}

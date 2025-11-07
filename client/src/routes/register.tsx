@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from '@tanstack/react-router';
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 interface File { }
 export const Route = createFileRoute('/register')({
@@ -85,11 +86,14 @@ function Register() {
       setUsername("");
       setPosition("");
       setProfilePicture(null)
+
+      const navigate = useNavigate()
+      navigate({ to: "/login" })
     } catch {
       // Catch any error
       setError("Network error. Please try again");
     } finally {
-      // make sure loading state is turned off no matter what
+      // Make sure loading state is turned off no matter what
       setIsLoading(false);
     }
   };
