@@ -72,10 +72,23 @@ def signin_user(user: UserLogin):
             "user_profile": user_response.data
         }
 
+        print(response_data)
+
         return {"data": response_data}
     
     except AuthApiError as e:
         return {"error": e.message}
 
+    except Exception as e:
+        return {"error": str(e)}
+    
+def signout_user(jwt: str):
+    """
+        Signs out a user by invalidating their JWT
+    """
+
+    try: 
+        supabase.auth.sign_out(jwt)
+        return {"message": "User signed out"}
     except Exception as e:
         return {"error": str(e)}

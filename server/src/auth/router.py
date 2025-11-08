@@ -1,6 +1,7 @@
-from fastapi import APIRouter, status, HTTPException, Form, File, UploadFile
+from fastapi import APIRouter, status, HTTPException, Form, File, UploadFile, Depends, Response
 from src.auth.schemas import UserBase, UserSignup, UserLogin, UserLoggedIn
-from src.auth.service import signup_user, signin_user
+from src.auth.service import signup_user, signin_user, signout_user
+from src.auth.dependencies import get_current_user, oauth2_scheme
 from typing import Optional
 from pydantic import ValidationError
 
@@ -35,7 +36,7 @@ async def create_user(
         )
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=e.errors() 
         )
 
@@ -56,7 +57,7 @@ async def create_user(
     return complete_profile_data["user_profile"]
 
 
-@auth_router.post("/login")
+@auth_router.post("/login", status_code=status.HTTP_202_ACCEPTED)
 def login_user(user: UserLogin):
     """
         Logs in a user using Supabase and returns both the user's profile and their session data which includes their JWT
@@ -72,6 +73,18 @@ def login_user(user: UserLogin):
 
     return user_data["data"]
 
-@auth_router.get("/logout")
-def logout_user():
-    return 
+@auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout_user(token: str = Depends(oauth2_scheme)):
+    """
+        Logs out a user using Supabase by invalidating their JWT 
+    """
+    signout_data = signout_user(token)
+    
+    if "error" in signout_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=signout_data["error"]
+        )
+
+    #Successful logout will return nothing
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,9 +1,18 @@
 import { useState } from "react";
 import { createFileRoute } from '@tanstack/react-router';
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, redirect } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "../contexts/AuthContext";
+
 interface File { }
 export const Route = createFileRoute('/register')({
+  beforeLoad: ({ context }) => {
+      if (context.auth.isAuthenticated) {
+        throw redirect({
+          to: '/dashboard',
+        });
+      }
+    },
   component: Register,
 })
 
@@ -19,6 +28,9 @@ function Register() {
   const [error, setError] = useState("");
   const [profilePicture, setProfilePicture] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false); // Used for button disable state and for loading text
+
+  const navigate = useNavigate()
+
 
   interface FastAPIValidationError {
     loc: (string | number)[];
@@ -87,9 +99,9 @@ function Register() {
       setPosition("");
       setProfilePicture(null)
 
-      const navigate = useNavigate()
       navigate({ to: "/login" })
-    } catch {
+    } catch (err) {
+      console.log(err)
       // Catch any error
       setError("Network error. Please try again");
     } finally {
