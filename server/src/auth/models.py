@@ -18,3 +18,4 @@ class UserProfile(Base):
     last_name: Column = Column(Text)
     username: Column = Column(Text, unique=True, index=True)
     position: Column = Column(Text)
+    profile_photo_url: Column = Column(Text)
