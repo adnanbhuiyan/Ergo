@@ -33,7 +33,7 @@ def create_new_project(
         )
     
     #owner_id=owner.id
-    created_project = create_project(proj_info=project_info, owner_id=uuid.UUID("tempUID"))
+    created_project = create_project(proj_info=project_info, owner_id=uuid.UUID("6e4fbdc0-2363-4115-a44e-039ab9fc966e"))
 
     if "error" in created_project:
         raise HTTPException(
@@ -85,3 +85,16 @@ def update_user_project(
         )
     
     return updated_project
+
+
+@projects_router.delete("/{proj_id}", status_code=status.HTTP_200_OK)
+def delete_user_project(proj_id: uuid.UUID):
+    delete_message = delete_project(proj_id)
+
+    if "error" in delete_message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=delete_message["error"]
+        )
+    
+    return delete_message

@@ -40,4 +40,8 @@ def update_project(proj_id: uuid.UUID, upd_proj: UpdateProject):
         return {"error": str(e)}
 
 def delete_project(proj_id: uuid.UUID):
-    pass 
+    try:
+        response = supabase.table("projects").delete().eq("id", proj_id).execute()
+        return {"message": "Project Deleted Successfully"}
+    except Exception as e:
+        return {"error": str(e)}
