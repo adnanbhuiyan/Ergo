@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import uuid
 from datetime import datetime
 from typing import Optional 
@@ -17,7 +17,16 @@ class UpdateProject(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
     budget: Optional[float] = Field(None, ge=0)
 
-class ProjectRead(Project):
+    @field_validator("*", mode="before")
+    def empty_str_to_none(cls, val):
+        """
+        If an empty string is received for a field, it's converted to None. 
+        """
+        if val == "":
+            return None
+        return val
+
+class GetProject(Project):
     id: uuid.UUID
     owner_id: uuid.UUID 
     created_at: datetime 
