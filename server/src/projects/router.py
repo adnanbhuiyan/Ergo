@@ -15,7 +15,7 @@ projects_router = APIRouter(
 
 @projects_router.post("", status_code=status.HTTP_201_CREATED)
 def create_new_project(
-    #owner: User = Depends(get_current_user),
+    owner: User = Depends(get_current_user),
     name: str = Form(...),
     description: str = Form(...),
     budget: float = Form(...)
@@ -33,7 +33,7 @@ def create_new_project(
         )
     
     #owner_id=owner.id
-    created_project = create_project(proj_info=project_info, owner_id=uuid.UUID("6e4fbdc0-2363-4115-a44e-039ab9fc966e"))
+    created_project = create_project(proj_info=project_info, owner_id=owner.id)
 
     if "error" in created_project:
         raise HTTPException(
