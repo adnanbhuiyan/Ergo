@@ -1,32 +1,30 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useAuth } from '../contexts/AuthContext'
+import { useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute('/dashboard')({
-  beforeLoad: ({ context, location }) => {
-    //Redirect user to login page if they are not authenticated
-    if (!context.auth.isAuthenticated) {
-      throw redirect({
-        to: '/login',
-        search: {
-          redirect: location.href,
-        },
-      });
-    }
-  },
+export const Route = createFileRoute("/dashboard")({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  const { logout } = useAuth();
-  
+  const { logout, isAuthenticated, user } = useAuth();
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate({ to: "/login" }); // Redirect if not authenticated
+    }
+  }, [isAuthenticated, navigate]);
+
   return (
     <div>
       <h2>Hello "/dashboard"!</h2>
       <Button variant="default" size="lg" onClick={() => logout()}>
-            Logout
+        Logout
       </Button>
     </div>
-  )
-  
+  );
 }

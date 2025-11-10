@@ -1,16 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useNavigate, redirect } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../contexts/AuthContext";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: ({ context }) => {
-    if (context.auth.isAuthenticated) {
-      throw redirect({
-        to: '/dashboard',
-      });
-    }
-  },
   component: Login,
 });
 
@@ -24,6 +17,13 @@ function Login() {
   const navigate = useNavigate();
 
   const { login } = useAuth();
+
+  const { isAuthenticated } = useAuth();
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: "/dashboard" });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,9 +56,6 @@ function Login() {
 
       //Navigate to the dashboard after the user logs in
       await navigate({ to: "/dashboard" });
-
-    
-      
     } catch (err) {
       setError("Network error. Please try again.");
       console.error("Login error:", err);

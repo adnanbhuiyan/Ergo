@@ -1,21 +1,13 @@
-import { useState } from "react";
-import { createFileRoute } from '@tanstack/react-router';
-import { useNavigate, redirect } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../contexts/AuthContext";
 
-interface File { }
-export const Route = createFileRoute('/register')({
-  beforeLoad: ({ context }) => {
-      if (context.auth.isAuthenticated) {
-        throw redirect({
-          to: '/dashboard',
-        });
-      }
-    },
+interface File {}
+export const Route = createFileRoute("/register")({
   component: Register,
-})
-
+});
 
 function Register() {
   // Set state variables for input fields
@@ -26,11 +18,18 @@ function Register() {
   const [username, setUsername] = useState("");
   const [position, setPosition] = useState("");
   const [error, setError] = useState("");
-  const [profilePicture, setProfilePicture] = useState<File | null>(null)
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false); // Used for button disable state and for loading text
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: "/dashboard" });
+    }
+  }, [isAuthenticated, navigate]);
 
   interface FastAPIValidationError {
     loc: (string | number)[];
@@ -58,8 +57,6 @@ function Register() {
       formData.append("profile_photo", profilePicture as Blob);
     }
 
-
-
     try {
       const response = await fetch("http://localhost:8000/auth/signup", {
         // Making post request to the FastAPI endpoint
@@ -74,14 +71,18 @@ function Register() {
 
         const errorData: { detail?: FastAPIValidationError[] | string } = data;
 
-        if (errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
-          errorMessage = errorData.detail.map((err: FastAPIValidationError) => {
-            const field = err.loc[err.loc.length - 1]; // Get the field name
-            return `${field}: ${err.msg}`;
-          }).join('; ');
-
-        }
-        else if (typeof errorData.detail === 'string') {
+        if (
+          errorData.detail &&
+          Array.isArray(errorData.detail) &&
+          errorData.detail.length > 0
+        ) {
+          errorMessage = errorData.detail
+            .map((err: FastAPIValidationError) => {
+              const field = err.loc[err.loc.length - 1]; // Get the field name
+              return `${field}: ${err.msg}`;
+            })
+            .join("; ");
+        } else if (typeof errorData.detail === "string") {
           errorMessage = errorData.detail;
         }
 
@@ -97,11 +98,11 @@ function Register() {
       setLastName("");
       setUsername("");
       setPosition("");
-      setProfilePicture(null)
+      setProfilePicture(null);
 
-      navigate({ to: "/login" })
+      navigate({ to: "/login" });
     } catch (err) {
-      console.log(err)
+      console.log(err);
       // Catch any error
       setError("Network error. Please try again");
     } finally {
@@ -211,19 +212,44 @@ function Register() {
 
             {/* Profile Picture Field */}
             <div>
-              <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="profilePicture"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Profile Picture (Optional)
               </label>
-              <input type="file" accept="image/*" onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setProfilePicture(e.target.files[0])
-                }
-              }} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-blue-500 focus:border-transparent"></input>
-              <p className="text-xs text-gray-500 mt-1">Optional. PNG, or JPG. Max 5MB</p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setProfilePicture(e.target.files[0]);
+                  }
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-blue-500 focus:border-transparent"
+              ></input>
+              <p className="text-xs text-gray-500 mt-1">
+                Optional. PNG, or JPG. Max 5MB
+              </p>
               {profilePicture && (
                 <div className="mt-3 flex items-center gap-3">
-                  <img src={profilePicture ? URL.createObjectURL(profilePicture as Blob) : ''} alt="Profile Preview" className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"></img>
-                  <Button variant="outline" type="button" className=" text-white hover:text-white" onClick={() => setProfilePicture(null)}>Remove</Button>
+                  <img
+                    src={
+                      profilePicture
+                        ? URL.createObjectURL(profilePicture as Blob)
+                        : ""
+                    }
+                    alt="Profile Preview"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
+                  ></img>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className=" text-white hover:text-white"
+                    onClick={() => setProfilePicture(null)}
+                  >
+                    Remove
+                  </Button>
                 </div>
               )}
             </div>
@@ -293,6 +319,6 @@ function Register() {
       </div>
     </div>
   );
-};
+}
 
 export default Register;
