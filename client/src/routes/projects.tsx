@@ -91,6 +91,9 @@ function RouteComponent() {
         setIsModalOpen(false)
         setError("")
         setIsLoading(false)
+        form.reset()
+        // Navigate to dashboard to see the new project
+        navigate({ to: "/dashboard" })
       }
     }
   })

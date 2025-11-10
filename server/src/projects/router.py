@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException, Form, File, UploadFile, Depends, Response
 from src.projects.schemas import CreateProject, GetProject, UpdateProject
-from src.projects.service import create_project, get_project, update_project, delete_project
+from src.projects.service import create_project, get_project, update_project, delete_project, get_all_projects
 from src.auth.dependencies import get_current_user
 from decimal import Decimal
 from gotrue.types import User
@@ -42,6 +42,18 @@ def create_new_project(
         )
     
     return created_project
+
+@projects_router.get("", status_code=status.HTTP_200_OK)
+def get_all_user_projects(owner: User = Depends(get_current_user)):
+    user_projects = get_all_projects(owner.id)
+    
+    if "error" in user_projects:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=user_projects["error"]
+        )
+    
+    return user_projects
 
 @projects_router.get("/{proj_id}", status_code=status.HTTP_200_OK, response_model=GetProject)
 def get_user_project(proj_id: uuid.UUID):

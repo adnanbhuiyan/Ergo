@@ -45,3 +45,10 @@ def delete_project(proj_id: uuid.UUID):
         return {"message": "Project Deleted Successfully"}
     except Exception as e:
         return {"error": str(e)}
+
+def get_all_projects(owner_id: uuid.UUID):
+    try:
+        response = supabase.table("projects").select("*").eq("owner_id", str(owner_id)).execute()
+        return response.data
+    except Exception as e:
+        return {"error": str(e)}
