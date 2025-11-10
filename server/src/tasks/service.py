@@ -1,5 +1,6 @@
 from src.database import supabase
 from src.tasks.schemas import CreateTask, UpdateTask
+from fastapi.encoders import jsonable_encoder
 from datetime import timedelta
 import uuid
 
@@ -10,11 +11,7 @@ def create_task(task_info: CreateTask, project_id: uuid.UUID, creator_id: uuid.U
         new_task["project_id"] = str(project_id)
         new_task["created_by"] = str(creator_id)
 
-        hours = new_task.pop("estimated_completion_time_hours")
-        td = timedelta(hours=hours)
-        new_task["estimated_completion_time"] = str(td)
-
-        response = supabase.table("tasks").insert(new_task).execute()
+        response = supabase.table("tasks").insert(jsonable_encoder(new_task)).execute()
         return response.data[0]
     except Exception as e:
         return {"error": str(e)}
@@ -36,24 +33,23 @@ def get_task(task_id: uuid.UUID):
         return {"error": str(e)}
 
 def update_task(task_id: uuid.UUID, task_update: UpdateTask):
-    """Partially updates a task's information."""
+    """Updates a task's information."""
     try:
+
+        old_task = get_task(task_id)
+        print(old_task)
         update_data = task_update.model_dump(exclude_unset=True)
-
         if not update_data:
-            return get_task(task_id)
+            return old_task
+        print(update_data)
+        task_info = {}
+        for key, value in update_data.items():
+            if value is not None:
+                task_info[key] = value 
+            else: 
+                task_info[key] = old_task[key]
 
-        if "estimated_completion_time_hours" in update_data:
-            hours = update_data.pop("estimated_completion_time_hours")
-            td = timedelta(hours=hours) if hours is not None else None
-            update_data["estimated_completion_time"] = str(td) if td is not None else None
-        
-        if "actual_completion_time_hours" in update_data:
-            hours = update_data.pop("actual_completion_time_hours")
-            td = timedelta(hours=hours) if hours is not None else None
-            update_data["actual_completion_time"] = str(td) if td is not None else None
-
-        response = supabase.table("tasks").update(update_data).eq("id", str(task_id)).execute()
+        response = supabase.table("tasks").update(task_info).eq("id", str(task_id)).execute()
         
         if not response.data:
             return {"error": "Task not found"}

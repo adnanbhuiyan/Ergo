@@ -14,12 +14,12 @@ tasks_router = APIRouter()
 @tasks_router.post("/projects/{project_id}/tasks", status_code=http_status.HTTP_201_CREATED, response_model=GetTask)
 def create_new_task(
     project_id: uuid.UUID,
-    # creator: User = Depends(get_current_user),
+    creator: User = Depends(get_current_user),
     name: str = Form(...),
     description: str = Form(...),
     priority: str = Form(...),
     status: str = Form(...),
-    estimated_completion_time_hours: float = Form(...),
+    estimated_completion_time: int = Form(...),
     budget: float = Form(...),
     expense: float = Form(...),
     due_date: datetime = Form(...)
@@ -27,14 +27,13 @@ def create_new_task(
     try:
         task_info = CreateTask(
             name=name, description=description, priority=priority, status=status,
-            estimated_completion_time_hours=estimated_completion_time_hours,
+            estimated_completion_time=estimated_completion_time,
             budget=budget, expense=expense, due_date=due_date
         )
     except ValidationError as e:
         raise HTTPException(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors())
 
-    creator_id = uuid.UUID("6e4fbdc0-2363-4115-a44e-039ab9fc966e") 
-    new_task = create_task(task_info, project_id, creator_id)
+    new_task = create_task(task_info, project_id, creator.id)
 
     if "error" in new_task:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=new_task["error"])
@@ -62,8 +61,8 @@ def update_single_task(
     description: Optional[str] = Form(None),
     priority: Optional[str] = Form(None),
     status: Optional[str] = Form(None),
-    estimated_completion_time_hours: Optional[str] = Form(None),
-    actual_completion_time_hours: Optional[str] = Form(None),
+    estimated_completion_time: Optional[str] = Form(None),
+    actual_completion_time: Optional[str] = Form(None),
     budget: Optional[str] = Form(None),
     expense: Optional[str] = Form(None),
     due_date: Optional[str] = Form(None),
@@ -72,8 +71,8 @@ def update_single_task(
     try:
         task_update_info = UpdateTask(
             name=name, description=description, priority=priority, status=status,
-            estimated_completion_time_hours=estimated_completion_time_hours,
-            actual_completion_time_hours=actual_completion_time_hours,
+            estimated_completion_time=estimated_completion_time,
+            actual_completion_time=actual_completion_time,
             budget=budget, expense=expense, due_date=due_date,
             completed_on=completed_on
         )

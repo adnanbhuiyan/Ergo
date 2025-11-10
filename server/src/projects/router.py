@@ -32,7 +32,6 @@ def create_new_project(
             detail=e.errors() 
         )
     
-    #owner_id=owner.id
     created_project = create_project(proj_info=project_info, owner_id=owner.id)
 
     if "error" in created_project:
