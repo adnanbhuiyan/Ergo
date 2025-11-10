@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "../contexts/AuthContext";
 
 interface File {}
+
 export const Route = createFileRoute("/register")({
   component: Register,
 });
