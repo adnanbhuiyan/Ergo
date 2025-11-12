@@ -20,6 +20,9 @@ def create_new_project(
     description: str = Form(...),
     budget: float = Form(...)
 ):
+    """
+        Create new project
+    """
     try:
         project_info = CreateProject(
             name=name, 
@@ -31,7 +34,7 @@ def create_new_project(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=e.errors() 
         )
-    
+    #print(owner.id)
     created_project = create_project(proj_info=project_info, owner_id=owner.id)
 
     if "error" in created_project:
@@ -44,6 +47,9 @@ def create_new_project(
 
 @projects_router.get("", status_code=status.HTTP_200_OK)
 def get_all_user_projects(owner: User = Depends(get_current_user)):
+    """
+        Get all user projects
+    """
     user_projects = get_all_projects(owner.id)
     
     if "error" in user_projects:
@@ -56,6 +62,9 @@ def get_all_user_projects(owner: User = Depends(get_current_user)):
 
 @projects_router.get("/{proj_id}", status_code=status.HTTP_200_OK, response_model=GetProject)
 def get_user_project(proj_id: uuid.UUID):
+    """
+        Get a specific user project
+    """
     user_project = get_project(proj_id)
 
     if "error" in user_project:
@@ -73,7 +82,9 @@ def update_user_project(
     description: Optional[str] = Form(None),
     budget: Optional[str] = Form(None)
 ):
-
+    """
+        Update a specific user project
+    """
     try:
         project_info = UpdateProject(
             name=name, 
@@ -100,6 +111,9 @@ def update_user_project(
 
 @projects_router.delete("/{proj_id}", status_code=status.HTTP_200_OK)
 def delete_user_project(proj_id: uuid.UUID):
+    """
+        Delete a specific user project
+    """
     delete_message = delete_project(proj_id)
 
     if "error" in delete_message:

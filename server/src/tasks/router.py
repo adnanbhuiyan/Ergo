@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, Form, Depends
 from fastapi import status as http_status
 from src.tasks.schemas import CreateTask, GetTask, UpdateTask
-from src.tasks.service import create_task, get_tasks_for_project, get_task, update_task, delete_task
+from src.tasks.service import create_task, get_tasks_for_project, get_task, update_task, delete_task, add_dependency, remove_dependency
 from src.auth.dependencies import get_current_user
 from gotrue.types import User
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 from typing import Optional, List
 from datetime import datetime
 import uuid
@@ -24,6 +24,9 @@ def create_new_task(
     expense: float = Form(...),
     due_date: datetime = Form(...)
 ):
+    """
+        Creates a task within the project
+    """
     try:
         task_info = CreateTask(
             name=name, description=description, priority=priority, status=status,
@@ -35,6 +38,7 @@ def create_new_task(
 
     new_task = create_task(task_info, project_id, creator.id)
 
+
     if "error" in new_task:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=new_task["error"])
     
@@ -42,6 +46,9 @@ def create_new_task(
 
 @tasks_router.get("/projects/{project_id}/tasks", status_code=http_status.HTTP_200_OK, response_model=List[GetTask])
 def get_all_tasks_for_project(project_id: uuid.UUID):
+    """
+        Gets information for all tasks in the project
+    """
     tasks = get_tasks_for_project(project_id)
     if isinstance(tasks, dict) and "error" in tasks:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=tasks["error"])
@@ -49,6 +56,9 @@ def get_all_tasks_for_project(project_id: uuid.UUID):
 
 @tasks_router.get("/tasks/{task_id}", status_code=http_status.HTTP_200_OK, response_model=GetTask)
 def get_single_task(task_id: uuid.UUID):
+    """
+        Gets information for a single task 
+    """
     task = get_task(task_id)
     if isinstance(task, dict) and "error" in task:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=task["error"])
@@ -68,6 +78,9 @@ def update_single_task(
     due_date: Optional[str] = Form(None),
     completed_on: Optional[str] = Form(None)
 ):
+    """
+        Updates a task with the new details
+    """
     try:
         task_update_info = UpdateTask(
             name=name, description=description, priority=priority, status=status,
@@ -86,7 +99,37 @@ def update_single_task(
 
 @tasks_router.delete("/tasks/{task_id}", status_code=http_status.HTTP_200_OK)
 def delete_single_task(task_id: uuid.UUID):
+    """
+        Deletes a task
+    """
     delete_message = delete_task(task_id)
     if "error" in delete_message:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=delete_message["error"])
     return delete_message
+
+
+class DependencyRequest(BaseModel):
+    """
+        Model used when adding a dependency
+    """
+    depends_on_task_id: uuid.UUID
+
+@tasks_router.post("/tasks/{task_id}/dependencies", status_code=http_status.HTTP_201_CREATED)
+def add_task_dependency(task_id: uuid.UUID, dependency: DependencyRequest):
+    """
+        Make a task dependent on another task.
+    """
+    result = add_dependency(task_id, dependency.depends_on_task_id)
+    if "error" in result:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=result["error"])
+    return {"message": "Dependency added successfully"}
+
+@tasks_router.delete("/tasks/{task_id}/dependencies/{depends_on_task_id}", status_code=http_status.HTTP_200_OK)
+def remove_task_dependency(task_id: uuid.UUID, depends_on_task_id: uuid.UUID):
+    """
+        Remove a dependency from a task.
+    """
+    result = remove_dependency(task_id, depends_on_task_id)
+    if "error" in result:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=result["error"])
+    return result

@@ -3,6 +3,9 @@ from src.projects.schemas import CreateProject, UpdateProject
 import uuid
 
 def create_project(proj_info: CreateProject, owner_id: uuid.UUID):
+    """
+        Creates a project using the user'
+    """
     try: 
         new_proj = proj_info.model_dump()
         new_proj["owner_id"] = str(owner_id)
@@ -13,6 +16,9 @@ def create_project(proj_info: CreateProject, owner_id: uuid.UUID):
 
 
 def get_project(proj_id: uuid.UUID):
+    """
+        Gets a specific user project information
+    """
     try:
         response = supabase.table("projects").select("*").eq("id", proj_id).single().execute()
         return response.data
@@ -22,6 +28,9 @@ def get_project(proj_id: uuid.UUID):
 
 
 def update_project(proj_id: uuid.UUID, upd_proj: UpdateProject):
+    """
+        Updates a specific project's information
+    """
     try:
         old_project = get_project(proj_id)
         print(old_project)
@@ -40,6 +49,9 @@ def update_project(proj_id: uuid.UUID, upd_proj: UpdateProject):
         return {"error": str(e)}
 
 def delete_project(proj_id: uuid.UUID):
+    """
+        Deletes a project 
+    """
     try:
         response = supabase.table("projects").delete().eq("id", proj_id).execute()
         return {"message": "Project Deleted Successfully"}
