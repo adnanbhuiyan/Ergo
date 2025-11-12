@@ -8,6 +8,7 @@ import type { AuthContextType } from "./contexts/AuthContext";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
+import NotFound from "./components/ui/notfound.tsx";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
@@ -29,6 +30,9 @@ function App() {
     context: {
       auth: auth as AuthContextType,
     },
+    notFoundMode: "root",
+    defaultNotFoundComponent: NotFound 
+
   });
 
   return <RouterProvider router={router} />;

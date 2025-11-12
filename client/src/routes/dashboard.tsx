@@ -143,8 +143,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
-/*
-<Button variant="default" size="lg" onClick={() => logout()}>
-        Logout
-</Button>
-*/
+
