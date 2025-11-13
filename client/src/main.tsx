@@ -5,6 +5,7 @@ import "./index.css";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import type { AuthContextType } from "./contexts/AuthContext";
+import { ThemeProvider } from "./components/theme-provider.tsx";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
@@ -24,6 +25,7 @@ declare module "@tanstack/react-router" {
 }
 
 function App() {
+
   const auth = useAuth();
   const router = createRouter({
     routeTree,
@@ -31,7 +33,7 @@ function App() {
       auth: auth as AuthContextType,
     },
     notFoundMode: "root",
-    defaultNotFoundComponent: NotFound 
+    defaultNotFoundComponent: NotFound
 
   });
 
@@ -43,9 +45,11 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ThemeProvider>
     </StrictMode>
   );
 }

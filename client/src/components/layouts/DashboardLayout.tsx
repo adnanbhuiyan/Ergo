@@ -58,10 +58,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">{user?.username}</p>
                     </div>
+                    <Button onClick={() => logout()} variant="default" className="cursor-pointer hover:bg-gray-100" >
+                        <LogOut className="w-5 h-5 text-gray-600" />
+                    </Button>
                 </div>
-                <Button onClick={() => logout()} variant="default">
-                    <LogOut className="w-5 h-5 text-gray-600" />
-                </Button>
             </div>
             <div className="flex-1 bg-gray-50 overflow-auto">
                 {children}
