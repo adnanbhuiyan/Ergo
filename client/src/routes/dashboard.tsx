@@ -7,6 +7,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { ProjectCard } from "@/components/project-card";
 import { Bell, FolderKanbanIcon, Grid3x3, List, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface Project {
   id: string;
@@ -26,6 +29,7 @@ function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const navigate = useNavigate();
 
@@ -82,8 +86,80 @@ function Dashboard() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex items-center gap-4">
-              <Button variant="default" className="text-white font-medium">Create Project</Button>
-              <Button variant="default" className="cursor-pointer hover:bg-gray-100"><Bell></Bell></Button>
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setIsModalOpen(true)} variant="default" size="sm" className="bg-slate-600 hover:bg-slate-700 text-white">Create Project</Button>
+                </DialogTrigger>
+
+                <DialogContent className="sm:max-w-[500px] bg-white z-50">
+                  <DialogHeader>
+                    <DialogTitle>Create New Project</DialogTitle>
+                  </DialogHeader>
+                  {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4">{error}</div>
+                  )}
+                  <form onSubmit={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    form.handleSubmit()
+                  }} className="space-y-0">
+                    <form.Field name="name" validators={{
+                      onChange: ({ value }) => {
+                        if (value.length < 3) return "Name must be at least 3 characters."
+                      },
+                    }}>
+                      {(field) => (
+                        <div className="mb-4">
+                          <Label htmlFor="name">Project Name</Label>
+                          <Input id="name" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
+                          {field.state.meta.errors ? (
+                            <p className="text-red-500 text-sm mt-1">
+                              {field.state.meta.errors[0]}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.Field>
+                    <form.Field name="description" validators={{
+                      onChange: ({ value }) => {
+                        if (value.length > 500) return "Max 500 Characters"
+                      },
+                    }}>
+                      {(field) => (
+                        <div className="mb-4">
+                          <Label htmlFor="description">Description</Label>
+                          <Input id="description" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
+                          {field.state.meta.errors ? (
+                            <p className="text-red-500 text-sm mt-1">
+                              {field.state.meta.errors[0]}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.Field>
+                    <form.Field name="budget" validators={{
+                      onChange: ({ value }) => {
+                        if (value < 0) return "Budget must be at least 0"
+                      },
+                    }}>
+                      {(field) => (
+                        <div className="mb-6">
+                          <Label htmlFor="budget">Budget</Label>
+                          <Input type="number" id="budget" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(Number(e.target.value))} className="mt-1" />
+                          {field.state.meta.errors ? (
+                            <p className="text-red-500 text-sm mt-1">
+                              {field.state.meta.errors[0]}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.Field>
+                    <Button type="submit" disabled={isLoading} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-4">
+                      {isLoading ? "Creating..." : "Create Project"}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
           {/* Overview Section */}
@@ -181,7 +257,7 @@ function Dashboard() {
             )}
           </div>
         </main>
-      </div >
+      </div>
     </DashboardLayout >
   );
 }
