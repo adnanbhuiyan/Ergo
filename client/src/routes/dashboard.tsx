@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
-import { Bell } from "lucide-react";
+import { Bell, Grid3x3, List } from "lucide-react";
 
 interface Project {
   id: string;
@@ -23,6 +23,7 @@ function Dashboard() {
   const { logout, isAuthenticated, user, session } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [view, setView] = useState<'grid' | 'list'>('grid')
 
   const navigate = useNavigate();
 
@@ -73,16 +74,44 @@ function Dashboard() {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-gray-50">
-        {/* Content Wrapper */}
         {/* Main Area */}
         <main className="p-8">
-          {/* Projects List */}
+          {/* Dashboard/Create Project */}
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex items-center gap-4">
               <Button variant="default" className="text-white font-medium">Create Project</Button>
               <Button variant="default" className="cursor-pointer hover:bg-gray-100"><Bell></Bell></Button>
             </div>
+          </div>
+          {/* Overview Section */}
+          <div className="bg-gray-100 rounded-lg p-6 mb-8">
+            <h2 className="text-lg font-semibold tex-gray-700 mb-4">Overview</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-gray-600 mb-2">Active Projects</p>
+                <div className="flex">
+                  <p className="text-3xl font-bold text-gray-900">{projects.length}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-gray-600 mb-2">Total Tasks</p>
+                <div className="flex">
+                  <p className="text-3xl font-bold text-gray-900">0</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-sm text-gray-600 mb-2">Completed Tasks</p>
+                <div className="flex">
+                  <p className="text-3xl font-bold text-gray-900">0</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Toolbar View */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
+            <div className=""></div>
           </div>
         </main>
       </div>
