@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useForm } from "@tanstack/react-form"
-import { DashboardLayout } from "@/components/layouts/DashboardLayout";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 

@@ -4,8 +4,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { DashboardLayout } from "@/components/layouts/DashboardLayout";
-import { Bell, FolderKanbanIcon, Grid3x3, List } from "lucide-react";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { ProjectCard } from "@/components/project-card";
+import { Bell, FolderKanbanIcon, Grid3x3, List, ChevronRight } from "lucide-react";
 
 interface Project {
   id: string;
@@ -129,7 +130,7 @@ function Dashboard() {
           {/* Display Container */}
           <div>
             {isLoading && (
-              <div className="text-center py-16 text-gray-500">
+              <div className="flex justify-center gap-2 items-center text-center py-16 text-gray-500">
                 <Spinner />
                 <span className="text-lg">Loading projects...</span>
               </div>
@@ -142,13 +143,40 @@ function Dashboard() {
               </div>
             )}
             {!isLoading && projects.length > 0 && view === 'grid' && (
+              // Grid View
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <p className="text-gray-500 col-span-full text-center py-8">Grid view - Project cards will appear here.</p>
+                {projects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    id={project.id}
+                    name={project.name}
+                    description={project.description}
+                    budget={project.budget}
+                    created_at={project.created_at}
+                    onClick={() => navigate({ to: '/projects', params: { projectId: project.id } })}></ProjectCard>
+                ))}
               </div>
             )}
             {!isLoading && projects.length > 0 && view === 'list' && (
+              // List View
               <div className="space-y-4">
-                <p className="text-gray-500 text-center py-8">List view - Project rows will appear here.</p>
+                {projects.map((project) => (
+                  <div key={project.id} onClick={() => navigate({ to: '/projects' })} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="text-xl font-semi-bold text-gray-800 mb-1">{project.name}</h4>
+                      <p className="text-sm text-gray-600 line-clamp-1">{project.description}</p>
+                    </div>
+                    <div className="text-center mx-8">
+                      <p className="text-xs text-gray-500 mb-1">Budget</p>
+                      <p className="text-lg font-bold text-slate-600">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(project.budget)}</p>
+                    </div>
+                    <div className="text-right min-w-[120px]">
+                      <p className="text-xs text-gray-500 mb-1">Created</p>
+                      <p className="text-sm text-gray-700">{new Date(project.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 ml-5 text-gray-400" />
+                  </div>
+                ))}
               </div>
             )}
           </div>
