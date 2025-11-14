@@ -110,8 +110,14 @@ function Dashboard() {
           </div>
           {/* Toolbar View */}
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
-            <div className=""></div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
+            </div>
+            <div>
+              <div className="flex-gap-1 border border-gray-300 rounded-md p-1 bg-white">
+                <button type="button" onClick={() => setView('grid')} className={`px-4 py-2 rounded transition colors flex items-center gap-2 `}></button>
+              </div>
+            </div>
           </div>
         </main>
       </div>
