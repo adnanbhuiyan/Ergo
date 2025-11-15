@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link } from "@tanstack/react-router";
 
 export default function Navbar() {

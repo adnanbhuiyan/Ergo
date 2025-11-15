@@ -8,6 +8,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     """
         Dependency to get the current user from the JWT and verify it with Supabase.
         Returns the user object.
+        This is used to create protected backend routes. 
     """
     try:
         #Gets the user based on their JWT 

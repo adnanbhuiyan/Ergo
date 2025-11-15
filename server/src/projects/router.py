@@ -1,10 +1,8 @@
-from fastapi import APIRouter, status, HTTPException, Form, File, UploadFile, Depends, Response
+from fastapi import APIRouter, status, HTTPException, Form, Depends
 from src.projects.schemas import CreateProject, GetProject, UpdateProject
 from src.projects.service import create_project, get_project, update_project, delete_project, get_all_projects
 from src.auth.dependencies import get_current_user
-from decimal import Decimal
 from gotrue.types import User
-from datetime import datetime
 from pydantic import ValidationError
 from typing import Optional
 import uuid
@@ -61,7 +59,10 @@ def get_all_user_projects(owner: User = Depends(get_current_user)):
     return user_projects
 
 @projects_router.get("/{proj_id}", status_code=status.HTTP_200_OK, response_model=GetProject)
-def get_user_project(proj_id: uuid.UUID):
+def get_user_project(
+    proj_id: uuid.UUID,
+    owner: User = Depends(get_current_user)
+):
     """
         Get a specific user project
     """
@@ -80,7 +81,8 @@ def update_user_project(
     proj_id: uuid.UUID,
     name: Optional[str] = Form(None), 
     description: Optional[str] = Form(None),
-    budget: Optional[str] = Form(None)
+    budget: Optional[str] = Form(None),
+    owner: User = Depends(get_current_user)
 ):
     """
         Update a specific user project
@@ -110,7 +112,10 @@ def update_user_project(
 
 
 @projects_router.delete("/{proj_id}", status_code=status.HTTP_200_OK)
-def delete_user_project(proj_id: uuid.UUID):
+def delete_user_project(
+    proj_id: uuid.UUID,
+    owner: User = Depends(get_current_user)
+):
     """
         Delete a specific user project
     """

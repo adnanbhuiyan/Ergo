@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field, field_validator
 import uuid
 from datetime import datetime
 from typing import Optional 
-from decimal import Decimal
 
 class Project(BaseModel):
     """

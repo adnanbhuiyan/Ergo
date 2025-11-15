@@ -45,7 +45,10 @@ def create_new_task(
     return new_task
 
 @tasks_router.get("/projects/{project_id}/tasks", status_code=http_status.HTTP_200_OK, response_model=List[GetTask])
-def get_all_tasks_for_project(project_id: uuid.UUID):
+def get_all_tasks_for_project(
+    project_id: uuid.UUID,
+    member: User = Depends(get_current_user)
+):
     """
         Gets information for all tasks in the project
     """
@@ -55,7 +58,10 @@ def get_all_tasks_for_project(project_id: uuid.UUID):
     return tasks
 
 @tasks_router.get("/tasks/{task_id}", status_code=http_status.HTTP_200_OK, response_model=GetTask)
-def get_single_task(task_id: uuid.UUID):
+def get_single_task(
+    task_id: uuid.UUID,
+    member: User = Depends(get_current_user)
+):
     """
         Gets information for a single task 
     """
@@ -76,7 +82,8 @@ def update_single_task(
     budget: Optional[str] = Form(None),
     expense: Optional[str] = Form(None),
     due_date: Optional[str] = Form(None),
-    completed_on: Optional[str] = Form(None)
+    completed_on: Optional[str] = Form(None),
+    member: User = Depends(get_current_user)
 ):
     """
         Updates a task with the new details
@@ -98,7 +105,10 @@ def update_single_task(
     return updated_task
 
 @tasks_router.delete("/tasks/{task_id}", status_code=http_status.HTTP_200_OK)
-def delete_single_task(task_id: uuid.UUID):
+def delete_single_task(
+    task_id: uuid.UUID,
+    member: User = Depends(get_current_user)
+):
     """
         Deletes a task
     """
@@ -115,7 +125,11 @@ class DependencyRequest(BaseModel):
     depends_on_task_id: uuid.UUID
 
 @tasks_router.post("/tasks/{task_id}/dependencies", status_code=http_status.HTTP_201_CREATED)
-def add_task_dependency(task_id: uuid.UUID, dependency: DependencyRequest):
+def add_task_dependency(
+    task_id: uuid.UUID, 
+    dependency: DependencyRequest,
+    member: User = Depends(get_current_user)
+):
     """
         Make a task dependent on another task.
     """
@@ -125,7 +139,11 @@ def add_task_dependency(task_id: uuid.UUID, dependency: DependencyRequest):
     return {"message": "Dependency added successfully"}
 
 @tasks_router.delete("/tasks/{task_id}/dependencies/{depends_on_task_id}", status_code=http_status.HTTP_200_OK)
-def remove_task_dependency(task_id: uuid.UUID, depends_on_task_id: uuid.UUID):
+def remove_task_dependency(
+    task_id: uuid.UUID, 
+    depends_on_task_id: uuid.UUID,
+    member: User = Depends(get_current_user)
+):
     """
         Remove a dependency from a task.
     """
