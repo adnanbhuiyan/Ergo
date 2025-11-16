@@ -1,5 +1,5 @@
 from src.database import supabase
-from src.projects.schemas import CreateProject, UpdateProject
+from src.projects.schemas import CreateProject, UpdateProject, AddProjectMember
 import uuid
 
 def create_project(proj_info: CreateProject, owner_id: uuid.UUID):
@@ -59,8 +59,57 @@ def delete_project(proj_id: uuid.UUID):
         return {"error": str(e)}
 
 def get_all_projects(owner_id: uuid.UUID):
+    """
+        Gets all projects a user is part of
+    """
     try:
         response = supabase.table("projects").select("*").eq("owner_id", str(owner_id)).execute()
         return response.data
     except Exception as e:
         return {"error": str(e)}
+    
+def add_member(proj_id: uuid.UUID, member_to_add: AddProjectMember):
+    """
+        Add a user to a project
+    """
+    try:
+        member_info = member_to_add.model_dump()
+        member_info["user_id"] = str(member_info["user_id"])
+        member_info["project_id"] = str(proj_id) 
+        add_response = supabase.table("project_members").insert(member_info).execute()
+        return add_response.data 
+    except Exception as e:
+        return {"error": str(e)}
+    
+def delete_member(proj_id: uuid.UUID, member_id: uuid.UUID):
+    """
+        Removes a user from a project
+    """
+    try: 
+        remove_response = (
+            supabase.table("project_members")
+                    .delete()
+                    .eq("project_id", proj_id)
+                    .eq("user_id", member_id)
+                    .execute()
+        )
+        return {"message": "User removed from project"}
+    except Exception as e:
+        return {"error": str(e)}
+
+def all_project_members(proj_id: uuid.UUID):
+    """
+        Gets all members in a project
+    """
+    try: 
+        #Performs a join with the userprofile table to get the user profile information 
+        all_response = (
+            supabase.table("project_members")
+                    .select("role, user:userprofile(*)")
+                    .eq("project_id", proj_id)
+                    .execute()
+        )
+        return all_response.data 
+
+    except Exception as e:
+        return {"error": str(e)}   

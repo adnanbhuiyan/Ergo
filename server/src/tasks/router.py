@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Form, Depends
 from fastapi import status as http_status
 from src.tasks.schemas import CreateTask, GetTask, UpdateTask
-from src.tasks.service import create_task, get_tasks_for_project, get_task, update_task, delete_task, add_dependency, remove_dependency
+from src.tasks.service import create_task, get_tasks_for_project, get_task, update_task, delete_task, add_dependency, remove_dependency, add_assignment, get_assignments, delete_assignment
 from src.auth.dependencies import get_current_user
 from gotrue.types import User
 from pydantic import ValidationError, BaseModel
@@ -150,4 +150,54 @@ def remove_task_dependency(
     result = remove_dependency(task_id, depends_on_task_id)
     if "error" in result:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=result["error"])
+    
     return result
+
+
+@tasks_router.post("/tasks/{task_id}/assignees", status_code=http_status.HTTP_201_CREATED)
+def assign_user_task(
+    task_id: uuid.UUID, 
+    assignee_id: uuid.UUID,
+    member: User = Depends(get_current_user)
+):
+    """
+        Assigns a task to a user in the project
+    """
+    task_assignment = add_assignment(task_id=task_id, assignee_id=assignee_id)
+
+    if "error" in task_assignment:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=task_assignment["error"])
+    
+    return task_assignment 
+
+
+@tasks_router.get("/tasks/{task_id}/assignees", status_code=http_status.HTTP_200_OK)
+def get_task_assignees(
+    task_id: uuid.UUID, 
+    member: User = Depends(get_current_user)
+):
+    """
+        Gets all assignees for a single task 
+    """
+    task_assignees = get_assignments(task_id=task_id)
+
+    if "error" in task_assignees:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=task_assignees["error"])
+    
+    return task_assignees 
+
+@tasks_router.delete("/tasks/{task_id}/assignees/{assignee_id}", status_code=http_status.HTTP_200_OK)
+def remove_user_assignment(
+    task_id: uuid.UUID, 
+    assignee_id: uuid.UUID,
+    member: User = Depends(get_current_user)
+):
+    """
+        Unassigns a user from a task 
+    """
+    delete_response = delete_assignment(task_id=task_id, assignee_id=assignee_id)
+
+    if "error" in delete_response:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=delete_response["error"])
+    
+    return delete_response

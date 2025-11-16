@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 import uuid
 from datetime import datetime
 from typing import Optional 
+from src.users.schemas import PublicUserProfile
 
 class Project(BaseModel):
     """
@@ -44,3 +45,21 @@ class GetProject(Project):
 
     class Config:
         from_attributes = True
+
+class ProjectMember(BaseModel):
+    """
+        The model that is used when displaying project member information
+    """
+    user: PublicUserProfile
+    role: str
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class AddProjectMember(BaseModel):
+    """
+        The model that is used when adding a member to a project 
+    """
+    user_id: uuid.UUID 
+    role: str 

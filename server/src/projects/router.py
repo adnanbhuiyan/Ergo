@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException, Form, Depends
-from src.projects.schemas import CreateProject, GetProject, UpdateProject
-from src.projects.service import create_project, get_project, update_project, delete_project, get_all_projects
+from src.projects.schemas import CreateProject, GetProject, UpdateProject, ProjectMember, AddProjectMember
+from src.projects.service import create_project, get_project, update_project, delete_project, get_all_projects, add_member, delete_member, all_project_members
 from src.auth.dependencies import get_current_user
 from gotrue.types import User
 from pydantic import ValidationError
@@ -128,3 +128,62 @@ def delete_user_project(
         )
     
     return delete_message
+
+
+@projects_router.post("/{proj_id}/members", status_code=status.HTTP_201_CREATED)
+def add_project_member(
+    proj_id: uuid.UUID, 
+    member_to_add: AddProjectMember,
+    user: User = Depends(get_current_user)
+):
+    """
+        Adds a user to a project 
+    """
+    add_message =  add_member(proj_id=proj_id, member_to_add=member_to_add)
+
+    if "error" in add_message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=add_message["error"]
+        )
+    
+    return add_message
+
+
+@projects_router.delete("/{proj_id}/members/{member_id}", status_code=status.HTTP_200_OK)
+def remove_project_member(
+    proj_id: uuid.UUID, 
+    member_id: uuid.UUID,
+    user: User = Depends(get_current_user)
+):
+    """
+        Removes a user from a project
+    """
+    delete_message = delete_member(proj_id=proj_id, member_id=member_id)
+
+    if "error" in delete_message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=delete_message["error"]
+        )
+    
+    return delete_message
+
+
+@projects_router.get("/{proj_id}/members", status_code=status.HTTP_200_OK, response_model=list[ProjectMember])
+def get_project_members(
+    proj_id: uuid.UUID,
+    user: User = Depends(get_current_user)
+):
+    """
+        Gets all members in a project and their user profiles 
+    """
+    project_members = all_project_members(proj_id=proj_id) 
+
+    if "error" in project_members:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=project_members["error"]
+        )
+    
+    return project_members

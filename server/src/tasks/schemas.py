@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import Optional, List
 
 class TaskDependencyRead(BaseModel):
-    """A task model for representing a dependency link."""
+    """
+        A task model for representing a dependency link.
+    """
     id: uuid.UUID
     name: str
     status: str
@@ -15,7 +17,9 @@ class TaskDependencyRead(BaseModel):
 
 
 class TaskBase(BaseModel):
-    """The base task model"""
+    """
+        The base task model
+    """
     name: str = Field(..., min_length=3, max_length=150)
     description: str
     priority: str
@@ -25,11 +29,15 @@ class TaskBase(BaseModel):
     due_date: datetime
 
 class CreateTask(TaskBase):
-    """The task model used when creating a new task"""
+    """
+        The task model used when creating a new task
+    """
     estimated_completion_time: int = Field(..., ge=0, description="Total estimated time in hours")
 
 class UpdateTask(BaseModel):
-    """The task model used when updating a task (all fields are optional)"""
+    """
+        The task model used when updating a task (all fields are optional)
+    """
     name: Optional[str] = Field(None, min_length=3, max_length=150)
     description: Optional[str] = Field(None, max_length=1000)
     priority: Optional[str] = None
@@ -48,7 +56,9 @@ class UpdateTask(BaseModel):
         return val
 
 class GetTask(TaskBase):
-    """The task model used when fetching a task's information"""
+    """
+        The task model used when fetching a task's information
+    """
     id: uuid.UUID
     project_id: uuid.UUID
     created_by: uuid.UUID

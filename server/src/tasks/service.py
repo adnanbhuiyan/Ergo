@@ -128,3 +128,46 @@ def remove_dependency(task_id: uuid.UUID, depends_on_task_id: uuid.UUID):
         return {"message": "Dependency removed successfully"}
     except Exception as e:
         return {"error": str(e)}
+    
+def add_assignment(task_id: uuid.UUID, assignee_id: uuid.UUID):
+    """
+        Assigns a user to a task
+    """
+    try:
+         assignment = {
+             "task_id": str(task_id),
+             "user_id": str(assignee_id)
+         }
+         assignment_response = supabase.table("task_members").insert(assignment).execute()
+         return assignment_response.data
+    except Exception as e:
+        return {"error": str(e)}
+    
+
+def get_assignments(task_id: uuid.UUID):
+    """
+        Gets all users assigned to a task along with their user profile
+    """
+    try:
+        assignments_response = (
+            supabase.table("task_members")
+                    .select("user:userprofile(*)")
+                    .eq("task_id", task_id)
+        ).execute()
+        return assignments_response.data
+    except Exception as e:
+        return {"error": str(e)}   
+    
+
+def delete_assignment(task_id: uuid.UUID, assignee_id: uuid.UUID):
+    """
+        Removes a user assignment from a task
+    """
+    try:
+         remove_response = supabase.table("task_members").delete().match({
+             "task_id": task_id,
+             "user_id": assignee_id
+         }).execute()
+         return remove_response.data
+    except Exception as e:
+        return {"error": str(e)}

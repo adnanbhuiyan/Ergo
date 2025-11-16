@@ -1,39 +1,33 @@
 from fastapi import APIRouter, status, HTTPException, Depends
 from src.auth.dependencies import get_current_user
 from gotrue.types import User
+from src.users.service import search_ergo_users
+from src.users.schemas import PublicUserProfile
+import uuid 
 
-users_router = APIRouter()
+users_router = APIRouter(
+    prefix="/users"
+)
 
-@users_router.get("users/{user_query}", status_code=status.HTTP_200_OK)
+@users_router.get("", status_code=status.HTTP_200_OK, response_model=list[PublicUserProfile])
 def find_ergo_user(
     user_query: str,
     user: User = Depends(get_current_user)
 ):
     """
-        Find other Ergo users based on their email or username to add 
-        to the project
+        Find other Ergo users based on their email or username 
     """
-    pass 
+    user_list = search_ergo_users(query_term=user_query, user_id=user.id)
+    #user_list = search_ergo_users(query_term=user_query, user_id=uuid.UUID("383758b7-0075-4e44-941a-bb0d1c140995"))
+
+
+    if "error" in user_list:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=user_list["error"]
+        )
+    
+    return user_list 
 
 
 
-@users_router.get("/tasks/{task_id}/users", status_code=status.HTTP_200_OK)
-def get_all_project_members(
-    task_id: str, 
-    user: User = Depends(get_current_user)
-):
-    """
-        Get all members in the project 
-    """
-    pass 
-
-@users_router.get("/tasks/{task_id}/users/{user_query}", status_code=status.HTTP_200_OK)
-def get_project_member(
-    task_id: str, 
-    user_query: str,
-    user: User = Depends(get_current_user)
-):
-    """
-        Find members in the project based on their email or username to assign to a task
-    """
-    pass 
