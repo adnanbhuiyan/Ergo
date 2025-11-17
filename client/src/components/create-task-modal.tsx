@@ -76,6 +76,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                 const createdTask = data
 
                 try {
+                    console.log(user?.id)
                     const assignResponse = await fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user?.id}`, {
                         method: 'POST',
                         headers: { "Authorization": `Bearer ${session?.access_token}` }
