@@ -24,11 +24,9 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const { logout, isAuthenticated, user, session } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [view, setView] = useState<'grid' | 'list'>('grid')
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
+  const [activeProjects, setActiveProjects] = useState(0)
 
   const navigate = useNavigate();
 
@@ -37,27 +35,6 @@ function Dashboard() {
       navigate({ to: "/login" }); // Redirect if not authenticated
     }
   }, [isAuthenticated, navigate]);
-
-  const fetchProjects = async () => {
-    if (!session?.access_token || !isAuthenticated) return;
-
-    setIsLoading(true);
-    try {
-      const response = await fetch("http://localhost:8000/projects", {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${session.access_token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProjects(data);
-      }
-    } catch (err) {
-      console.error("Error fetching projects:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchUpcomingTasks = async () => {
     if (!session?.access_token || !isAuthenticated) return
@@ -74,6 +51,8 @@ function Dashboard() {
       if (!projectsResponse.ok) return
 
       const userProjects = await projectsResponse.json()
+
+
 
       for (const project of userProjects) {
         const tasksResponse = await fetch(`http://localhost:8000/projects/${project.id}/tasks`, {
@@ -93,7 +72,7 @@ function Dashboard() {
               const assignees = await assigneesResponse.json()
 
               const isAssignedToMe = assignees.some(
-                (assignee: any) => assignee.user.id === user?.id
+                (assignee: any) => assignee.user?.id === user?.id
               )
 
               if (isAssignedToMe) {
@@ -103,7 +82,7 @@ function Dashboard() {
           }
         }
       }
-
+      console.log(allTasks)
       allTasks.sort((a, b) => {
         const dateA = new Date(a.due_date).getTime();
         const dateB = new Date(b.due_date).getTime()
@@ -113,6 +92,11 @@ function Dashboard() {
       const upcomingFive = allTasks.slice(0, 5)
 
       setUpcomingTasks(upcomingFive)
+
+      const projectsWithMyTasks = new Set(allTasks.map((task: any) => task.project_id))
+      const activeProjectsCount = projectsWithMyTasks.size
+
+      setActiveProjects(activeProjectsCount)
 
     } catch (err) {
       console.error("Error fetching upcoming tasks:", err)
@@ -158,7 +142,7 @@ function Dashboard() {
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-2">Active Projects</p>
                 <div className="flex">
-                  <p className="text-3xl font-bold text-gray-900">{projects.length}</p>
+                  <p className="text-3xl font-bold text-gray-900">{activeProjects}</p>
                 </div>
               </div>
               <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -170,7 +154,7 @@ function Dashboard() {
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-2">Completed Tasks</p>
                 <div className="flex">
-                  <p className="text-3xl font-bold text-gray-900">0</p>
+                  <p className="text-3xl font-bold text-gray-900">{upcomingTasks.length}</p>
                 </div>
               </div>
             </div>
