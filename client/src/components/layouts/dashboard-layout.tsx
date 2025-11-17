@@ -1,7 +1,7 @@
 import React from "react"
 import type { ReactNode } from "react"
 import { Link } from "@tanstack/react-router"
-import { LayoutDashboard, FolderKanban, Settings } from "lucide-react"
+import { LayoutDashboard, FolderKanban, Settings, CheckSquare } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar"
 import { LogOut } from "lucide-react"
@@ -36,6 +36,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             }}>
                                 <FolderKanban className="w-5 h-5" />
                                 <span>Projects</span>
+                            </Link>
+                        </ul>
+                        <ul>
+                            <Link to="/my-tasks" className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 rounded-lg mx-2 transition-colors" activeProps={{
+                                className: "bg-slate-100 text-slate-900 font-medium"
+                            }}>
+                                <CheckSquare className="w-5 h-5" />
+                                <span>My Tasks</span>
                             </Link>
                         </ul>
                         <ul>

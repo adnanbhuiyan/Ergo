@@ -5,11 +5,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { ProjectCard } from "@/components/project-card";
-import { Bell, FolderKanbanIcon, Grid3x3, List, ChevronRight } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Bell, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Project {
   id: string;
@@ -30,6 +27,8 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [upcomingTasks, setUpcomingTasks] = useState<any[]>([])
+  const [tasksLoading, setTasksLoading] = useState(false)
 
   const navigate = useNavigate();
 
@@ -60,9 +59,71 @@ function Dashboard() {
     }
   };
 
+  const fetchUpcomingTasks = async () => {
+    if (!session?.access_token || !isAuthenticated) return
+
+    setTasksLoading(true)
+    const allTasks: any[] = []
+
+    try {
+      const projectsResponse = await fetch("http://localhost:8000/projects", {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${session.access_token}` }
+      })
+
+      if (!projectsResponse.ok) return
+
+      const userProjects = await projectsResponse.json()
+
+      for (const project of userProjects) {
+        const tasksResponse = await fetch(`http://localhost:8000/projects/${project.id}/tasks`, {
+          method: "GET",
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        })
+
+        if (tasksResponse.ok) {
+          const projectTasks = await tasksResponse.json()
+
+          for (const task of projectTasks) {
+            const assigneesResponse = await fetch(`http://localhost:8000/tasks/${task.id}/assignees`, {
+              method: "GET",
+              headers: { "Authorization": `Bearer ${session.access_token}` }
+            })
+            if (assigneesResponse.ok) {
+              const assignees = await assigneesResponse.json()
+
+              const isAssignedToMe = assignees.some(
+                (assignee: any) => assignee.user.id === user?.id
+              )
+
+              if (isAssignedToMe) {
+                allTasks.push(task)
+              }
+            }
+          }
+        }
+      }
+
+      allTasks.sort((a, b) => {
+        const dateA = new Date(a.due_date).getTime();
+        const dateB = new Date(b.due_date).getTime()
+        return dateA - dateB
+      })
+
+      const upcomingFive = allTasks.slice(0, 5)
+
+      setUpcomingTasks(upcomingFive)
+
+    } catch (err) {
+      console.error("Error fetching upcoming tasks:", err)
+    } finally {
+      setTasksLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated && session?.access_token) {
-      fetchProjects();
+      fetchUpcomingTasks()
     }
   }, [isAuthenticated, session]);
 
@@ -70,7 +131,7 @@ function Dashboard() {
   useEffect(() => {
     const handleFocus = () => {
       if (isAuthenticated && session?.access_token) {
-        fetchProjects();
+        fetchUpcomingTasks()
       }
     };
     window.addEventListener('focus', handleFocus);
@@ -86,80 +147,8 @@ function Dashboard() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex items-center gap-4">
-              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setIsModalOpen(true)} variant="default" size="sm" className="bg-slate-600 hover:bg-slate-700 text-white">Create Project</Button>
-                </DialogTrigger>
-
-                <DialogContent className="sm:max-w-[500px] bg-white z-50">
-                  <DialogHeader>
-                    <DialogTitle>Create New Project</DialogTitle>
-                  </DialogHeader>
-                  {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4">{error}</div>
-                  )}
-                  <form onSubmit={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    form.handleSubmit()
-                  }} className="space-y-0">
-                    <form.Field name="name" validators={{
-                      onChange: ({ value }) => {
-                        if (value.length < 3) return "Name must be at least 3 characters."
-                      },
-                    }}>
-                      {(field) => (
-                        <div className="mb-4">
-                          <Label htmlFor="name">Project Name</Label>
-                          <Input id="name" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
-                          {field.state.meta.errors ? (
-                            <p className="text-red-500 text-sm mt-1">
-                              {field.state.meta.errors[0]}
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
-                    </form.Field>
-                    <form.Field name="description" validators={{
-                      onChange: ({ value }) => {
-                        if (value.length > 500) return "Max 500 Characters"
-                      },
-                    }}>
-                      {(field) => (
-                        <div className="mb-4">
-                          <Label htmlFor="description">Description</Label>
-                          <Input id="description" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
-                          {field.state.meta.errors ? (
-                            <p className="text-red-500 text-sm mt-1">
-                              {field.state.meta.errors[0]}
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
-                    </form.Field>
-                    <form.Field name="budget" validators={{
-                      onChange: ({ value }) => {
-                        if (value < 0) return "Budget must be at least 0"
-                      },
-                    }}>
-                      {(field) => (
-                        <div className="mb-6">
-                          <Label htmlFor="budget">Budget</Label>
-                          <Input type="number" id="budget" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(Number(e.target.value))} className="mt-1" />
-                          {field.state.meta.errors ? (
-                            <p className="text-red-500 text-sm mt-1">
-                              {field.state.meta.errors[0]}
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
-                    </form.Field>
-                    <Button type="submit" disabled={isLoading} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-4">
-                      {isLoading ? "Creating..." : "Create Project"}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <Button variant="default" className="text-white font-medium">Create Project</Button>
+              <Button variant="default" className="cursor-pointer hover:bg-gray-100"><Bell></Bell></Button>
             </div>
           </div>
           {/* Overview Section */}
@@ -186,71 +175,46 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          {/* Toolbar View */}
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
+          {/* Tasks Section */}
+          <div className="bg-white rounded-lg p-6 mb-8 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibod text-gray-900">Upcoming Tasks</h2>
+              <Link to="/my-tasks" className="flex items-center cursor-pointer text-sm">View All <ChevronRight className="w-5 h-5 ml-5 text-gray-400" /></Link>
             </div>
-            <div>
-              <div className="flex gap-1 border border-gray-300 rounded-md p-1 bg-white">
-                <button type="button" onClick={() => setView('grid')} className={`px-4 py-2 rounded transition-colors flex items-center gap-2 cursor-pointer ${view === 'grid' ? 'bg-slate-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}><Grid3x3 className="w-4 h-4" />
-                  <span>Grid</span>
-                </button>
-                <button type="button" onClick={() => setView("list")} className={`px-4 py-2 rounded transition-colors flex items-center gap-2 cursor-pointer ${view === 'list' ? 'bg-slate-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                  <List className="w-4 h-4" />
-                  <span>List</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          {/* Display Container */}
-          <div>
-            {isLoading && (
-              <div className="flex justify-center gap-2 items-center text-center py-16 text-gray-500">
+            {tasksLoading && (
+              <div className="flex justify-center gap-2 items-center text-center">
                 <Spinner />
-                <span className="text-lg">Loading projects...</span>
+                <p className="text-gray-500 text-center py-4">Loading tasks...</p>
               </div>
             )}
-            {!isLoading && projects.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16">
-                <FolderKanbanIcon className="w-16 h-16 text-gray-400 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">No projects yet.</h3>
-                <p className="text-gray-500 text-center"></p>
-              </div>
-            )}
-            {!isLoading && projects.length > 0 && view === 'grid' && (
-              // Grid View
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    id={project.id}
-                    name={project.name}
-                    description={project.description}
-                    budget={project.budget}
-                    created_at={project.created_at}
-                    onClick={() => navigate({ to: '/projects', params: { projectId: project.id } })}></ProjectCard>
-                ))}
-              </div>
-            )}
-            {!isLoading && projects.length > 0 && view === 'list' && (
-              // List View
-              <div className="space-y-4">
-                {projects.map((project) => (
-                  <div key={project.id} onClick={() => navigate({ to: '/projects' })} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="text-xl font-semi-bold text-gray-800 mb-1">{project.name}</h4>
-                      <p className="text-sm text-gray-600 line-clamp-1">{project.description}</p>
+            {!tasksLoading && upcomingTasks.length > 0 && (
+              <div className="space-y-3">
+                {upcomingTasks.map((task) => (
+                  <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                    {/* Left Side of Task Row */}
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 mb01">{task.name}</h4>
+                        <p className="text-sm text-gray-600 line-clamp-1 mb-2">{task.description}</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {task.priority === "High" && (
+                            <Badge className="bg-red-100 text-red-800">{task.priority}</Badge>
+                          )}
+                          {task.priority === "Medium" && (
+                            <Badge className="bg-yellow-100 text-yellow-800">{task.priority}</Badge>
+                          )}
+                          {task.priority === "Low" && (
+                            <Badge className="bg-green-100 text-green-800">{task.priority}</Badge>
+                          )}
+                          <span className="text-gray-600">{task.status}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center mx-8">
-                      <p className="text-xs text-gray-500 mb-1">Budget</p>
-                      <p className="text-lg font-bold text-slate-600">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(project.budget)}</p>
+                    {/* Right Side of Task Row */}
+                    <div className="text-right ml-4">
+                      <p className="text-xs text-gray-500 mb-1">Due</p>
+                      <p className="text-sm font-medium text-gray-900">{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                     </div>
-                    <div className="text-right min-w-[120px]">
-                      <p className="text-xs text-gray-500 mb-1">Created</p>
-                      <p className="text-sm text-gray-700">{new Date(project.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 ml-5 text-gray-400" />
                   </div>
                 ))}
               </div>
