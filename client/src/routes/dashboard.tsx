@@ -72,7 +72,10 @@ function Dashboard() {
               const assignees = await assigneesResponse.json()
 
               const isAssignedToMe = assignees.some(
-                (assignee: any) => assignee.user?.id === user?.id
+                (assignee: any) => {
+                  console.log("Comparing:", assignee.user?.id, "with", user?.id)
+                  assignee.user?.id === user?.id
+                }
               )
 
               if (isAssignedToMe) {
