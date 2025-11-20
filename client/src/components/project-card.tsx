@@ -36,7 +36,7 @@ export function ProjectCard({ id, name, description, budget, created_at, onClick
             </CardContent>
             <CardFooter>
                 <div className="text-sm text-blue-600 flex items-center gap-1 cursor-pointer">
-                    <p>View Projects</p>
+                    <p>View Project</p>
                     <ArrowRight /></div>
             </CardFooter>
         </Card>

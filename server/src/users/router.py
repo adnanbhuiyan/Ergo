@@ -18,8 +18,6 @@ def find_ergo_user(
         Find other Ergo users based on their email or username 
     """
     user_list = search_ergo_users(query_term=user_query, user_id=user.id)
-    #user_list = search_ergo_users(query_term=user_query, user_id=uuid.UUID("383758b7-0075-4e44-941a-bb0d1c140995"))
-
 
     if "error" in user_list:
         raise HTTPException(
