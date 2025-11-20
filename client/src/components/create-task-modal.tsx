@@ -75,17 +75,30 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
 
                 const createdTask = data
 
+                if (!user?.id) {
+                    console.error("Cannot assign task: user not found")
+                    setIsOpen(false)
+                    setError("")
+                    form.reset()
+                    onTaskCreated()
+                    setIsLoading(false)
+                }
+
                 try {
-                    console.log(user?.id)
-                    console.log("🟢 Assigning task to user ID:", user?.id)
-                    console.log("🟢 Full user object:", user)
-                    const assignResponse = await fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user?.id}`, {
+                    const assignUrl = `http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user?.id}`
+                    console.log("Assignment URL:", assignUrl)
+
+                    const assignResponse = await fetch(assignUrl, {
                         method: 'POST',
                         headers: { "Authorization": `Bearer ${session?.access_token}` }
                     })
 
                     if (!assignResponse.ok) {
-                        console.error("Failed to assign task")
+                        const errorData = await assignResponse.json()
+                        console.error("Assignment failed - Status:", assignResponse.status)
+                        console.error("Assignment failed - Error:", errorData)
+                    } else {
+                        console.log("Task assigned successfully")
                     }
 
                 } catch (err) {
