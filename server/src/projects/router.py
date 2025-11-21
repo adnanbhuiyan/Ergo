@@ -185,5 +185,6 @@ def get_project_members(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=project_members["error"]
         )
-    
+    print(project_members)
+
     return project_members
