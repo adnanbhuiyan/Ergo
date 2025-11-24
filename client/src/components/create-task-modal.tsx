@@ -195,7 +195,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Priority"></SelectValue>
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="z-[100] bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
                                         <SelectItem value="Low">Low</SelectItem>
                                         <SelectItem value="Medium">Medium</SelectItem>
                                         <SelectItem value="High">High</SelectItem>
@@ -214,7 +214,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Status"></SelectValue>
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="z-[100] bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
                                         <SelectItem value="To-Do">To-Do</SelectItem>
                                         <SelectItem value="In-Progress">In-Progress</SelectItem>
                                         <SelectItem value="In-Review">In-Review</SelectItem>

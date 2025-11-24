@@ -11,17 +11,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface User {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  username: string;
-  position: string;
-  profile_photo_url: string;
-} 
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    username: string;
+    position: string;
+    profile_photo_url: string;
+}
 
 interface ProjectMember {
-    role: string;      
+    role: string;
     user: User;
 }
 
@@ -35,7 +35,7 @@ function ProjectDetail() {
     const { projectId } = useParams({ from: "/projects/$projectId" })
 
     const [project, setProject] = useState<any>(null)
-    const [members, setMembers] = useState<ProjectMember[]>([]) 
+    const [members, setMembers] = useState<ProjectMember[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
     const [tasks, setTasks] = useState<any[]>([])
@@ -78,7 +78,7 @@ function ProjectDetail() {
 
             if (response.ok) {
                 const data = await response.json()
-                console.log("Members data:", data) 
+                console.log("Members data:", data)
                 setMembers(data)
             }
         } catch (err) {
@@ -186,11 +186,11 @@ function ProjectDetail() {
                                                     </Tooltip>
                                                 ))}
                                             </TooltipProvider>
-                                            
+
                                             {members.length > 5 && (
-                                                 <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 text-xs font-medium text-gray-600">
+                                                <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 text-xs font-medium text-gray-600">
                                                     +{members.length - 5}
-                                                 </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -220,14 +220,20 @@ function ProjectDetail() {
                             <div className="flex gap-4 overflow-x-auto pb-4">
                                 {columns.map((columnStatus) => (
                                     <div key={columnStatus} className="shrink-0 w-80 bg-gray-100 rounded-lg p-4">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="font-semibold text-gray-900">{columnStatus}</h3>
-                                            <Badge className="bg-slate-200 text-slate-700">{tasks.filter(t => t.status === columnStatus).length}</Badge>
+                                        <div className="mb-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <h3 className="font-semibold text-gray-900 text-base">{columnStatus}</h3>
+                                                <Badge className=" bg-gray-200 text-gray-700 text-xs px-2 py-0.5">{tasks.filter(t => t.status === columnStatus).length}</Badge>
+                                            </div>
                                             <CreateTaskModal
                                                 projectId={projectId}
                                                 onTaskCreated={fetchTasks}
                                                 defaultStatus={columnStatus}
-                                                trigger={<Button variant="ghost" size="sm">Add Task</Button>}
+                                                trigger={
+                                                    <Button className="w-full justify-start text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-dashed" variant="outline" size="sm">
+                                                        Add Task
+                                                    </Button>
+                                                }
                                             />
                                         </div>
                                         <div className="space-y-3 min-h-[200px]">
