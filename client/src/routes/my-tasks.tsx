@@ -58,15 +58,12 @@ function MyTasks() {
                         })
                         if (assigneesResponse.ok) {
                             const assignees = await assigneesResponse.json()
-                            console.log("🔵 Task:", task.name, "Assignees:", assignees)
-                            console.log("🔵 My user ID:", user?.id)
+
                             const isAssignedToMe = assignees.some(
                                 (assignee: any) => {
-                                    console.log("Comparing:", assignee.user?.id, "with", user?.id)
-                                    assignee.user?.id === user?.id
+                                    return assignee.user?.id === user?.id
                                 }
                             )
-                            console.log("🔵 Is assigned to me?", isAssignedToMe)
 
                             if (isAssignedToMe) {
                                 allTasks.push(task)

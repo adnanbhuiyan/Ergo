@@ -73,8 +73,7 @@ function Dashboard() {
 
               const isAssignedToMe = assignees.some(
                 (assignee: any) => {
-                  console.log("Comparing:", assignee.user?.id, "with", user?.id)
-                  assignee.user?.id === user?.id
+                  return assignee.user?.id === user?.id
                 }
               )
 
@@ -85,7 +84,9 @@ function Dashboard() {
           }
         }
       }
+
       console.log(allTasks)
+
       allTasks.sort((a, b) => {
         const dateA = new Date(a.due_date).getTime();
         const dateB = new Date(b.due_date).getTime()
