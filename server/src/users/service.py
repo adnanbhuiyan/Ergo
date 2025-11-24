@@ -8,7 +8,7 @@ def search_ergo_users(query_term: str, user_id: uuid.UUID):
     try:
         user_response = ( 
             supabase.table("userprofile")
-            .select("*")
+            .select("*") 
             .or_(f"email.ilike.%{query_term}%, username.ilike.%{query_term}%")
             .neq("id", user_id)
             .execute()
