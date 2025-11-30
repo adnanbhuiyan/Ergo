@@ -1,6 +1,7 @@
 from src.database import supabase
 from src.projects.schemas import CreateProject, UpdateProject, AddProjectMember
 import uuid
+from datetime import datetime
 
 def create_project(db, proj_info: CreateProject, owner_id: uuid.UUID):
     """
@@ -32,17 +33,20 @@ def update_project(db, proj_id: uuid.UUID, upd_proj: UpdateProject):
         Updates a specific project's information
     """
     try:
-        old_project = get_project(proj_id)
+        old_project = get_project(db, proj_id)
         print(old_project)
         upd_project = upd_proj.model_dump(exclude_unset=True)
         print(upd_project)
         project_info = {}
         for key, value in upd_project.items():
             if value is not None:
-                project_info[key] = value 
+                if isinstance(value, datetime):
+                    project_info[key] = value.isoformat()
+                else:
+                    project_info[key] = value 
             else: 
-                project_info[key] = old_project[key]
-                
+                project_info[key] = old_project[key]       
+
         update = db.from_("projects").update(project_info).eq("id", proj_id).execute()
         return update.data[0]
     except Exception as e:

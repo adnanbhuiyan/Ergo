@@ -6,6 +6,7 @@ from gotrue.types import User
 from pydantic import ValidationError
 from typing import Optional
 import uuid
+from datetime import datetime
 
 projects_router = APIRouter(
     prefix="/projects"
@@ -82,6 +83,7 @@ def update_user_project(
     name: Optional[str] = Form(None), 
     description: Optional[str] = Form(None),
     budget: Optional[str] = Form(None),
+    completed_at: Optional[str] = Form(None),
     ctx: AuthContext = Depends(get_current_user)
 ):
     """
@@ -92,6 +94,7 @@ def update_user_project(
             name=name, 
             description=description,
             budget=budget,
+            completed_at=completed_at
         ) 
     except ValidationError as e:
         raise HTTPException(

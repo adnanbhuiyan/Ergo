@@ -4,11 +4,18 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Settings, Search, UserPlus, X } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { CreateTaskModal } from "@/components/create-task-modal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useForm } from "@tanstack/react-form"
+
+// --- Interfaces ---
 
 interface User {
     id: string;
@@ -25,21 +32,32 @@ interface ProjectMember {
     user: User;
 }
 
+interface SelectedUser extends User {
+    role: string;
+}
+
 export const Route = createFileRoute("/projects/$projectId")({
     component: ProjectDetail,
 })
+
+// --- Main Route Component ---
 
 function ProjectDetail() {
     const { session, isAuthenticated } = useAuth()
     const navigate = useNavigate()
     const { projectId } = useParams({ from: "/projects/$projectId" })
 
+    // --- Data State ---
     const [project, setProject] = useState<any>(null)
     const [members, setMembers] = useState<ProjectMember[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
     const [tasks, setTasks] = useState<any[]>([])
     const [tasksLoading, setTasksLoading] = useState(false)
+    
+    // --- Edit Modal State ---
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+
     const columns = ["To-Do", "In-Progress", "In-Review", "Blocked", "Completed"]
 
     useEffect(() => {
@@ -47,6 +65,8 @@ function ProjectDetail() {
             navigate({ to: "/login" })
         }
     }, [isAuthenticated, navigate])
+
+    // --- Fetchers ---
 
     const fetchProject = async () => {
         try {
@@ -78,7 +98,6 @@ function ProjectDetail() {
 
             if (response.ok) {
                 const data = await response.json()
-                console.log("Members data:", data)
                 setMembers(data)
             }
         } catch (err) {
@@ -113,21 +132,26 @@ function ProjectDetail() {
         }
     }, [projectId, session])
 
-    // Get member initials 
-    const getInitials = (m: ProjectMember) => {
-        if (m.user.first_name && m.user.last_name) {
-            return `${m.user.first_name[0]}${m.user.last_name[0]}`.toUpperCase();
-        }
-        if (m.user.first_name) return m.user.first_name.slice(0, 2).toUpperCase();
-        if (m.user.username) return m.user.username.slice(0, 2).toUpperCase();
-        if (m.user.email) return m.user.email[0].toUpperCase();
+
+    // --- Helpers ---
+
+    const getInitials = (user: User) => {
+        if (user.first_name && user.last_name) return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+        if (user.first_name) return user.first_name.slice(0, 2).toUpperCase();
+        if (user.username) return user.username.slice(0, 2).toUpperCase();
         return "?";
     };
 
-    //Display the member"s name
-    const getDisplayName = (m: ProjectMember) => {
-        if (m.user.first_name && m.user.last_name) return `${m.user.first_name} ${m.user.last_name}`;
-        return m.user.username || m.user.email || "Unknown User";
+    const getDisplayName = (user: User) => {
+        if (user.first_name && user.last_name) return `${user.first_name} ${user.last_name}`;
+        return user.username || user.email || "Unknown User";
+    };
+
+    // Callback when edit is successful
+    const handleProjectUpdate = () => {
+        setIsEditModalOpen(false);
+        fetchProject();
+        fetchMembers();
     };
 
     return (
@@ -156,12 +180,15 @@ function ProjectDetail() {
                                     <ArrowLeft className="w-5 h-5" />
                                 </Button>
                                 <div className="flex flex-col">
-                                    <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+                                    <div className="flex items-center gap-2">
+                                        <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+                                        {project.completed_at && <Badge variant="secondary" className="bg-green-100 text-green-800">Completed</Badge>}
+                                    </div>
                                     <p className="text-sm text-gray-600 mt-1 line-clamp-1 max-w-lg">{project.description}</p>
                                 </div>
                             </div>
 
-                            {/* Display the team members as a stack of avatars */}
+                           
                             <div className="flex items-center gap-6 md:ml-auto">
                                 {members.length > 0 && (
                                     <div className="flex flex-col items-end">
@@ -169,24 +196,22 @@ function ProjectDetail() {
                                         <div className="flex -space-x-2 overflow-hidden hover:space-x-1 transition-all duration-200">
                                             <TooltipProvider>
                                                 {members.slice(0, 5).map((member, index) => (
-                                                    // Use id, or index as fallback key
                                                     <Tooltip key={member.user.id || index}>
                                                         <TooltipTrigger asChild>
                                                             <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-white cursor-default select-none">
-                                                                <AvatarImage src={member.user.profile_photo_url} alt={getDisplayName(member)} />
+                                                                <AvatarImage src={member.user.profile_photo_url} alt={getDisplayName(member.user)} />
                                                                 <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
-                                                                    {getInitials(member)}
+                                                                    {getInitials(member.user)}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p className="font-medium">{getDisplayName(member)}</p>
+                                                            <p className="font-medium">{getDisplayName(member.user)}</p>
                                                             <p className="text-xs text-gray-500 capitalize">{member.role}</p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 ))}
                                             </TooltipProvider>
-
                                             {members.length > 5 && (
                                                 <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 text-xs font-medium text-gray-600">
                                                     +{members.length - 5}
@@ -204,6 +229,31 @@ function ProjectDetail() {
                                         {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(project.budget)}
                                     </p>
                                 </div>
+
+                            
+                                <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="icon" className="ml-2">
+                                            <Settings className="w-5 h-5 text-gray-600" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[600px] bg-white z-50 max-h-[90vh] overflow-y-auto">
+                                        <DialogHeader>
+                                            <DialogTitle>Project Settings</DialogTitle>
+                                        </DialogHeader>
+                                        
+                                        {/* Render the Form Component ONLY when modal is open */}
+                                        {isEditModalOpen && (
+                                            <EditProjectForm 
+                                                project={project} 
+                                                currentMembers={members} 
+                                                projectId={projectId} 
+                                                onSuccess={handleProjectUpdate} 
+                                            />
+                                        )}
+                                    </DialogContent>
+                                </Dialog>
+
                             </div>
                         </div>
                     </div>
@@ -262,5 +312,295 @@ function ProjectDetail() {
                 </div>
             )}
         </div>
+    )
+}
+
+// --- Sub-Component: Edit Project Form ---
+
+interface EditProjectFormProps {
+    project: any;
+    currentMembers: ProjectMember[];
+    projectId: string;
+    onSuccess: () => void;
+}
+
+function EditProjectForm({ project, currentMembers, projectId, onSuccess }: EditProjectFormProps) {
+    const { session } = useAuth();
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [updateError, setUpdateError] = useState("");
+    
+    // Member search state
+    const [userQuery, setUserQuery] = useState("");
+    const [userSearchResults, setUserSearchResults] = useState<User[]>([]);
+    const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+    
+    // Form state for members (initialized from props)
+    const [formMembers, setFormMembers] = useState<SelectedUser[]>(
+        currentMembers.map(m => ({ ...m.user, role: m.role }))
+    );
+
+    const editForm = useForm({
+        defaultValues: {
+            name: project.name || "",
+            description: project.description || "",
+            budget: project.budget || 0,
+            is_completed: !!project.completed_at
+        },
+        onSubmit: async ({ value }) => {
+            setUpdateError("")
+            setIsUpdating(true)
+            
+            try {
+                const formData = new FormData()
+                formData.append("name", value.name)
+                formData.append("description", value.description)
+                formData.append("budget", String(value.budget))
+                
+                // Add the current date if project is marked as completed
+                if (value.is_completed && !project.completed_at) {
+                    formData.append("completed_at", new Date().toISOString())
+                } 
+                
+                // Send Updated Project Details
+                const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
+                    method: "PUT",
+                    headers: { "Authorization": `Bearer ${session?.access_token}` },
+                    body: formData
+                })
+
+                if (!response.ok) {
+                    const data = await response.json()
+                    throw new Error(data.detail || "Failed to update project");
+                }
+
+                // Edit Members
+                const usersToAdd = formMembers.filter(fm => !currentMembers.some(m => m.user.id === fm.id));
+                const usersToRemove = currentMembers.filter(m => !formMembers.some(fm => fm.id === m.user.id));
+
+                await Promise.all([
+                    ...usersToAdd.map(u => 
+                        fetch(`http://localhost:8000/projects/${projectId}/members`, {
+                            method: "POST",
+                            headers: {
+                                "Authorization": `Bearer ${session?.access_token}`,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ user_id: u.id, role: u.role })
+                        })
+                    ),
+                    ...usersToRemove.map(m => 
+                        fetch(`http://localhost:8000/projects/${projectId}/members/${m.user.id}`, {
+                            method: "DELETE",
+                            headers: { "Authorization": `Bearer ${session?.access_token}` }
+                        })
+                    )
+                ]);
+
+                onSuccess();
+
+            } catch (err: any) {
+                setUpdateError(err.message || "Failed to update project")
+            } finally {
+                setIsUpdating(false)
+            }
+        }
+    })
+
+    // Search Users Effect
+    useEffect(() => {
+        const searchUsers = async () => {
+            if (!userQuery || userQuery.length < 2) {
+                setUserSearchResults([]);
+                return;
+            }
+            setIsSearchingUsers(true);
+            try {
+                const url = `http://localhost:8000/users?user_query=${encodeURIComponent(userQuery)}`
+                const response = await fetch(url, {
+                    method: "GET",
+                    headers: { "Authorization": `Bearer ${session?.access_token}` }
+                })
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const filtered = data.filter((u: User) =>
+                        !formMembers.some(selected => selected.id === u.id)
+                    );
+                    setUserSearchResults(filtered);
+                }
+            } catch (error) {
+                console.error("Failed to search users", error);
+            } finally {
+                setIsSearchingUsers(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            searchUsers();
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [userQuery, session?.access_token, formMembers]);
+
+    // Helpers for the form
+    const getInitials = (user: User) => {
+        if (user.first_name && user.last_name) return `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+        if (user.first_name) return user.first_name.slice(0, 2).toUpperCase();
+        if (user.username) return user.username.slice(0, 2).toUpperCase();
+        return "?";
+    };
+
+    const getDisplayName = (user: User) => {
+        if (user.first_name && user.last_name) return `${user.first_name} ${user.last_name}`;
+        return user.username || user.email || "Unknown User";
+    };
+
+    return (
+        <form onSubmit={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            editForm.handleSubmit()
+        }} className="space-y-4">
+            
+            {updateError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4 text-sm">{updateError}</div>
+            )}
+
+            {/* Name */}
+            <editForm.Field name="name" validators={{
+                onChange: ({ value }) => value.length < 3 ? "Name must be at least 3 characters." : undefined,
+            }}>
+                {(field) => (
+                    <div>
+                        <Label htmlFor="name">Project Name</Label>
+                        <Input id="name" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
+                        {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
+                    </div>
+                )}
+            </editForm.Field>
+
+            {/* Description */}
+            <editForm.Field name="description" validators={{
+                onChange: ({ value }) => value.length > 500 ? "Max 500 Characters" : undefined,
+            }}>
+                {(field) => (
+                    <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Input id="description" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
+                        {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
+                    </div>
+                )}
+            </editForm.Field>
+
+            {/* Budget */}
+            <editForm.Field name="budget" validators={{
+                onChange: ({ value }) => value < 0 ? "Budget must be at least 0" : undefined,
+            }}>
+                {(field) => (
+                    <div>
+                        <Label htmlFor="budget">Budget</Label>
+                        <Input type="number" id="budget" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(Number(e.target.value))} className="mt-1" />
+                        {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
+                    </div>
+                )}
+            </editForm.Field>
+
+            {/* Status */}
+            <editForm.Field name="is_completed">
+                {(field) => (
+                    <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox 
+                            id="is_completed" 
+                            checked={field.state.value} 
+                            onCheckedChange={(checked) => field.handleChange(checked === true)} 
+                        />
+                        <Label htmlFor="is_completed" className="font-normal">Mark project as completed</Label>
+                    </div>
+                )}
+            </editForm.Field>
+
+            {/* Manage Members */}
+            <div className="pt-4 border-t border-gray-100">
+                <Label>Manage Team Members</Label>
+                
+                {/* Search */}
+                <div className="relative mt-2">
+                    <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="Add users by username or email..."
+                            className="pl-8"
+                            value={userQuery}
+                            onChange={(e) => setUserQuery(e.target.value)}
+                        />
+                    </div>
+                    {userQuery.length >= 2 && (
+                        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                            {isSearchingUsers ? (
+                                <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
+                            ) : userSearchResults.length > 0 ? (
+                                userSearchResults.map((user) => (
+                                    <div
+                                        key={user.id}
+                                        className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
+                                        onClick={() => {
+                                            setFormMembers([...formMembers, { ...user, role: "Member" }]);
+                                            setUserQuery("");
+                                            setUserSearchResults([]);
+                                        }}
+                                    >
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={user.profile_photo_url} />
+                                            <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900">{getDisplayName(user)}</p>
+                                            <p className="text-xs text-gray-500">{user.email}</p>
+                                        </div>
+                                        <UserPlus className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-4 text-center text-sm text-gray-500">No users found.</div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Active Member List in Form */}
+                <div className="mt-4 space-y-2">
+                    <p className="text-xs font-medium text-gray-500 uppercase">Current Team ({formMembers.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                        {formMembers.map((user) => (
+                            <div key={user.id} className="flex items-center gap-2 bg-slate-100 text-slate-800 px-3 py-1.5 rounded-full text-sm">
+                                <Avatar className="h-5 w-5">
+                                    <AvatarImage src={user.profile_photo_url} />
+                                    <AvatarFallback className="text-[10px]">{getInitials(user)}</AvatarFallback>
+                                </Avatar>
+                                <span>{user.username}</span>
+                                <span className="text-xs text-slate-500 border-l pl-2 border-slate-300">{user.role}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormMembers(formMembers.filter(m => m.id !== user.id))}
+                                    className="hover:bg-slate-200 rounded-full p-0.5 transition-colors"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <Button type="submit" disabled={isUpdating} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-6">
+                {isUpdating ? (
+                    <div className="flex items-center gap-2">
+                        <Spinner className="h-4 w-4" />
+                        <span>Saving Changes...</span>
+                    </div>
+                ) : "Save Changes"}
+            </Button>
+
+        </form>
     )
 }

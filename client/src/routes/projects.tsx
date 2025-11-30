@@ -1,17 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Outlet, useLocation } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useForm } from "@tanstack/react-form"
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, FolderKanbanIcon, Grid3x3, List, Search, X, UserPlus } from "lucide-react";
+import { ChevronRight, FolderKanbanIcon, Grid3x3, List, Search, X, UserPlus, Trash2, CheckCircle2 } from "lucide-react";
 import { ProjectCard } from "@/components/project-card";
 import { Spinner } from "@/components/ui/spinner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 // --- Interfaces ---
 
@@ -22,6 +33,7 @@ interface Project {
   budget: number;
   owner_id: string;
   created_at: string;
+  completed_at: string | null; // Added this field
 }
 
 interface PublicUserProfile {
@@ -34,15 +46,8 @@ interface PublicUserProfile {
   profile_photo_url: string;
 }
 
-// Extend profile to include the user's project role 
 interface SelectedUser extends PublicUserProfile {
   role: string;
-}
-
-interface FastAPIValidationError {
-  loc: (string | number)[];
-  msg: string;
-  type: string;
 }
 
 export const Route = createFileRoute("/projects")({
@@ -56,19 +61,26 @@ function RouteComponent() {
   const { session, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  // --- State ---
+  // --- Main State ---
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false) // General loading for project fetch
-  const [isSubmitting, setIsSubmitting] = useState(false) // Loading for form submit
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [projects, setProjects] = useState<Project[]>([]);
   const [view, setView] = useState<'grid' | 'list'>('grid')
+
+  // --- Delete Dialog State ---
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   // --- User Search State ---
   const [userQuery, setUserQuery] = useState("")
   const [userSearchResults, setUserSearchResults] = useState<PublicUserProfile[]>([])
   const [isSearchingUsers, setIsSearchingUsers] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([])
+
+  // --- Derived State (Splitting Active vs Completed) ---
+  const activeProjects = useMemo(() => projects.filter(p => !p.completed_at), [projects]);
+  const completedProjects = useMemo(() => projects.filter(p => p.completed_at), [projects]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -103,60 +115,64 @@ function RouteComponent() {
     }
   }, [isAuthenticated, session]);
 
+  //Delete Project Dialog
+  const confirmDelete = (projectId: string) => {
+    setProjectToDelete(projectId);
+  }
+
+  //Logic for deleting the project
+  const executeDeleteProject = async () => {
+    if (!session?.access_token || !projectToDelete) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/projects/${projectToDelete}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        },
+      });
+
+      if (response.ok) {
+        setProjects((prevProjects) => prevProjects.filter((p) => p.id !== projectToDelete));
+        setProjectToDelete(null); // Close dialog
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to delete project:", errorData);
+      }
+    } catch (err) {
+      console.error("Error deleting project:", err);
+    }
+  };
+
   // --- User Search Logic ---
   useEffect(() => {
     const searchUsers = async () => {
-      console.log("searchUsers called, userQuery:", userQuery)
-
       if (!userQuery || userQuery.length < 2) {
-        console.log("Query too short, clearing results")
         setUserSearchResults([]);
         return;
       }
-
-      console.log("Starting search...")
-      console.log("Session token exists?", !!session?.access_token)
-      console.log(session?.access_token)
-      
       setIsSearchingUsers(true);
-
       try {
         const url = `http://localhost:8000/users?user_query=${encodeURIComponent(userQuery)}`
-        console.log("🟡 Fetching:", url)
-
         const response = await fetch(url, {
           method: "GET",
           headers: { "Authorization": `Bearer ${session?.access_token}` }
         })
 
-        console.log("🟣 Response status:", response.status)
-        console.log("🟣 Response ok?", response.ok)
-
         if (response.ok) {
           const data = await response.json();
-          console.log("Data received:", data)
-          console.log("Data length:", data.length)
-
-          // Filter out users already selected
           const filtered = data.filter((u: PublicUserProfile) =>
             !selectedUsers.some(selected => selected.id === u.id)
           );
-          console.log("Filtered length:", filtered.length)
           setUserSearchResults(filtered);
-        } else {
-          console.error("Response not ok:", response.status)
-          const errorText = await response.text()
-          console.error("Error text:", errorText)
         }
       } catch (error) {
         console.error("Failed to search users", error);
       } finally {
-        console.log("🏁 Search complete, setting isSearchingUsers to false")
         setIsSearchingUsers(false);
       }
     };
 
-    // Debounce search
     const timeoutId = setTimeout(() => {
       searchUsers();
     }, 300);
@@ -165,9 +181,9 @@ function RouteComponent() {
   }, [userQuery, session?.access_token, selectedUsers]);
 
   const handleAddUser = (user: PublicUserProfile) => {
-    setSelectedUsers([...selectedUsers, { ...user, role: "Member" }]); // Default role to "Member"
-    setUserQuery(""); // Clear search
-    setUserSearchResults([]); // Clear results
+    setSelectedUsers([...selectedUsers, { ...user, role: "Member" }]);
+    setUserQuery("");
+    setUserSearchResults([]);
   };
 
   const handleRemoveUser = (userId: string) => {
@@ -183,7 +199,7 @@ function RouteComponent() {
     },
     onSubmit: async ({ value }) => {
       setError("")
-      setIsSubmitting(true) // Use submitting state
+      setIsSubmitting(true)
       const formData = new FormData()
 
       if (value.name) formData.append("name", value.name)
@@ -191,7 +207,6 @@ function RouteComponent() {
       if (value.budget !== undefined) formData.append("budget", String(value.budget))
 
       try {
-        // 1. Create the Project
         const response = await fetch("http://localhost:8000/projects", {
           method: "POST",
           headers: { "Authorization": `Bearer ${session?.access_token}` },
@@ -204,11 +219,9 @@ function RouteComponent() {
           throw new Error(data.detail || "Failed to create project");
         }
 
-        // If project was created successfully, add members
         const newProjectId = data.id;
 
         if (selectedUsers.length > 0) {
-          // Invite all users in parallel
           await Promise.all(
             selectedUsers.map(user =>
               fetch(`http://localhost:8000/projects/${newProjectId}/members`, {
@@ -226,27 +239,64 @@ function RouteComponent() {
           );
         }
 
-        // 3. Cleanup and Redirect
         setIsModalOpen(false)
         setError("")
         form.reset()
-        setSelectedUsers([]) // Reset users
+        setSelectedUsers([])
+        await fetchProjects();
         navigate({ to: "/dashboard" })
 
       } catch (err: any) {
-        // Handle Error
         let errorMessage = "Failed to create project at this time.";
-
-        if (typeof err.message === 'string') {
-          errorMessage = err.message;
-        }
-
+        if (typeof err.message === 'string') errorMessage = err.message;
         setError(errorMessage);
       } finally {
         setIsSubmitting(false)
       }
     }
   })
+
+  // Helper to render the list rows 
+  const renderListRow = (project: Project) => (
+    <div 
+        key={project.id} 
+        onClick={() => navigate({ to: `/projects/${project.id}`, params: { projectId: project.id } })} 
+        className={`bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer flex items-center justify-between group ${project.completed_at ? 'bg-gray-50' : ''}`}
+    >
+        <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+                <h4 className={`text-xl font-semi-bold ${project.completed_at ? 'text-gray-600' : 'text-gray-800'}`}>{project.name}</h4>
+                {project.completed_at && <Badge variant="secondary" className="text-xs bg-gray-200 text-gray-700">Completed</Badge>}
+                {!project.completed_at && <Badge className="text-xs bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>}
+            </div>
+            <p className="text-sm text-gray-600 line-clamp-1">{project.description}</p>
+        </div>
+        <div className="text-center mx-8">
+            <p className="text-xs text-gray-500 mb-1">Budget</p>
+            <p className={`text-lg font-bold ${project.completed_at ? 'text-gray-500' : 'text-slate-600'}`}>
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(project.budget)}
+            </p>
+        </div>
+        <div className="text-right min-w-[120px]">
+            <p className="text-xs text-gray-500 mb-1">Created</p>
+            <p className="text-sm text-gray-700">{new Date(project.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+        </div>
+        
+        {/* List View Delete Button */}
+        <div className="flex items-center gap-4 ml-5">
+            <button 
+                onClick={(e) => {
+                e.stopPropagation();
+                confirmDelete(project.id); 
+                }}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+            >
+                <Trash2 className="w-5 h-5" />
+            </button>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+        </div>
+    </div>
+  )
 
   return (
     <DashboardLayout>
@@ -271,7 +321,6 @@ function RouteComponent() {
           <Dialog open={isModalOpen} onOpenChange={(open) => {
             setIsModalOpen(open);
             if (!open) {
-              // Reset state on close
               form.reset();
               setSelectedUsers([]);
               setError("");
@@ -296,7 +345,6 @@ function RouteComponent() {
                 form.handleSubmit()
               }} className="space-y-4">
 
-                {/* Project Name */}
                 <form.Field name="name" validators={{
                   onChange: ({ value }) => value.length < 3 ? "Name must be at least 3 characters." : undefined,
                 }}>
@@ -309,7 +357,6 @@ function RouteComponent() {
                   )}
                 </form.Field>
 
-                {/* Description */}
                 <form.Field name="description" validators={{
                   onChange: ({ value }) => value.length > 500 ? "Max 500 Characters" : undefined,
                 }}>
@@ -322,7 +369,6 @@ function RouteComponent() {
                   )}
                 </form.Field>
 
-                {/* Budget */}
                 <form.Field name="budget" validators={{
                   onChange: ({ value }) => value < 0 ? "Budget must be at least 0" : undefined,
                 }}>
@@ -335,11 +381,8 @@ function RouteComponent() {
                   )}
                 </form.Field>
 
-                {/* Add Users to Project */}
                 <div className="pt-4 border-t border-gray-100">
                   <Label>Invite Team Members</Label>
-
-                  {/* Search Input */}
                   <div className="relative mt-2">
                     <div className="relative">
                       <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
@@ -350,8 +393,6 @@ function RouteComponent() {
                         onChange={(e) => setUserQuery(e.target.value)}
                       />
                     </div>
-
-                    {/* Search Results Dropdown */}
                     {userQuery.length >= 2 && (
                       <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
                         {isSearchingUsers ? (
@@ -380,8 +421,6 @@ function RouteComponent() {
                       </div>
                     )}
                   </div>
-
-                  {/* Selected Users List */}
                   {selectedUsers.length > 0 && (
                     <div className="mt-4 space-y-2">
                       <p className="text-xs font-medium text-gray-500 uppercase">Inviting {selectedUsers.length} people</p>
@@ -420,6 +459,36 @@ function RouteComponent() {
             </DialogContent>
           </Dialog>
 
+          
+          <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the project and remove all associated data.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={(e) => {
+                        e.stopPropagation();
+                        setProjectToDelete(null);
+                    }}>
+                        Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction 
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            executeDeleteProject();
+                        }}
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+
           {/* Project List Rendering */}
           <div>
             {isLoading && (
@@ -428,45 +497,84 @@ function RouteComponent() {
                 <span className="text-lg">Loading projects...</span>
               </div>
             )}
+
             {!isLoading && projects.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16">
                 <FolderKanbanIcon className="w-16 h-16 text-gray-400 mb-4" />
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">No projects yet.</h3>
               </div>
             )}
-            {!isLoading && projects.length > 0 && view === 'grid' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    id={project.id}
-                    name={project.name}
-                    description={project.description}
-                    budget={project.budget}
-                    created_at={project.created_at}
-                    onClick={() => navigate({ to: `/projects/${project.id}`, params: { projectId: project.id } })}></ProjectCard>
-                ))}
-              </div>
-            )}
-            {!isLoading && projects.length > 0 && view === 'list' && (
-              <div className="space-y-4">
-                {projects.map((project) => (
-                  <div key={project.id} onClick={() => navigate({ to: `/projects/${project.id}`, params: { projectId: project.id } })} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="text-xl font-semi-bold text-gray-800 mb-1">{project.name}</h4>
-                      <p className="text-sm text-gray-600 line-clamp-1">{project.description}</p>
-                    </div>
-                    <div className="text-center mx-8">
-                      <p className="text-xs text-gray-500 mb-1">Budget</p>
-                      <p className="text-lg font-bold text-slate-600">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(project.budget)}</p>
-                    </div>
-                    <div className="text-right min-w-[120px]">
-                      <p className="text-xs text-gray-500 mb-1">Created</p>
-                      <p className="text-sm text-gray-700">{new Date(project.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 ml-5 text-gray-400" />
-                  </div>
-                ))}
+            
+            {/* Active Projects */}
+            {!isLoading && projects.length > 0 && (
+              <div className="space-y-8">
+
+                <div>
+                   <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                     Active Projects
+                   </h2>
+                   {activeProjects.length === 0 ? (
+                      <p className="text-gray-500 text-sm italic ml-4">No active projects.</p>
+                   ) : (
+                     <>
+                        {view === 'grid' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {activeProjects.map((project) => (
+                              <ProjectCard
+                                key={project.id}
+                                id={project.id}
+                                name={project.name}
+                                description={project.description}
+                                budget={project.budget}
+                                created_at={project.created_at}
+                                completed_at={project.completed_at}
+                                onClick={() => navigate({ to: `/projects/${project.id}`, params: { projectId: project.id } })}
+                                onDelete={confirmDelete} 
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {view === 'list' && (
+                          <div className="space-y-4">
+                            {activeProjects.map(renderListRow)}
+                          </div>
+                        )}
+                     </>
+                   )}
+                </div>
+
+                {/* Completed Projects (Only show if there are completed projects) */}
+                {completedProjects.length > 0 && (
+                   <div className="pt-4 border-t border-gray-200">
+                      <h2 className="text-xl font-bold text-gray-600 mb-4 flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-gray-400" />
+                        Completed Projects
+                      </h2>
+                      {view === 'grid' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-80">
+                            {completedProjects.map((project) => (
+                              <ProjectCard
+                                key={project.id}
+                                id={project.id}
+                                name={project.name}
+                                description={project.description}
+                                budget={project.budget}
+                                created_at={project.created_at}
+                                completed_at={project.completed_at}
+                                onClick={() => navigate({ to: `/projects/${project.id}`, params: { projectId: project.id } })}
+                                onDelete={confirmDelete} 
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {view === 'list' && (
+                          <div className="space-y-4 opacity-80">
+                            {completedProjects.map(renderListRow)}
+                          </div>
+                        )}
+                   </div>
+                )}
               </div>
             )}
           </div>

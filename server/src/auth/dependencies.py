@@ -32,8 +32,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
         return AuthContext(user=user, token=token)
     except Exception as e:
+        err_message = str(e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid Token {e.message}",
+            detail=f"Invalid Token {err_message}",
             headers={"WWW-Authenticate": "Bearer"}
         )

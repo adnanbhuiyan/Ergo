@@ -25,7 +25,8 @@ class UpdateProject(BaseModel):
     name: Optional[str] = Field(None, min_length=3, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
     budget: Optional[float] = Field(None, ge=0)
-
+    completed_at: Optional[datetime] = None
+    
     @field_validator("*", mode="before")
     def empty_str_to_none(cls, val):
         """
@@ -42,6 +43,7 @@ class GetProject(Project):
     id: uuid.UUID
     owner_id: uuid.UUID 
     created_at: datetime 
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
