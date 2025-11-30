@@ -47,6 +47,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const sessionData: SessionData = JSON.parse(storedSession);
         const userData: UserProfile = JSON.parse(storedUser);
 
+        try {
+            const payloadBase64 = sessionData.access_token.split('.')[1];
+            const decodedPayload = JSON.parse(atob(payloadBase64));
+            const expiryTime = decodedPayload.exp * 1000; 
+            const currentTime = Date.now();
+
+            //If jwt is expired, clear the session storage to force user to re-login 
+            if (currentTime >= expiryTime - 10000) {
+              console.warn("Stored session is expired. Clearing storage.");
+              localStorage.removeItem("auth_session");
+              localStorage.removeItem("auth_user");
+              return; 
+            }
+          } catch (e) {
+            console.error("Failed to decode token, clearing session", e);
+            localStorage.removeItem("auth_session");
+            localStorage.removeItem("auth_user");
+            return;
+        }
+
         setUser(userData);
         setSession(sessionData);
         setIsAuthenticated(true);

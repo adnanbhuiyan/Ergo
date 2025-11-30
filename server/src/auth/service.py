@@ -72,12 +72,13 @@ def signin_user(user: UserLogin):
             "user_profile": user_response.data
         }
 
+
         print(response_data)
 
         return {"data": response_data}
     
     except AuthApiError as e:
-        return {"error": e.message}
+        return {"error": e.message} 
 
     except Exception as e:
         return {"error": str(e)}

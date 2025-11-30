@@ -106,17 +106,18 @@ function RouteComponent() {
   // --- User Search Logic ---
   useEffect(() => {
     const searchUsers = async () => {
-      console.log("🟢 searchUsers called, userQuery:", userQuery)
+      console.log("searchUsers called, userQuery:", userQuery)
 
       if (!userQuery || userQuery.length < 2) {
-        console.log("🔴 Query too short, clearing results")
+        console.log("Query too short, clearing results")
         setUserSearchResults([]);
         return;
       }
 
-      console.log("🟡 Starting search...")
-      console.log("🟡 Session token exists?", !!session?.access_token)
-
+      console.log("Starting search...")
+      console.log("Session token exists?", !!session?.access_token)
+      console.log(session?.access_token)
+      
       setIsSearchingUsers(true);
 
       try {
@@ -133,19 +134,19 @@ function RouteComponent() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log("✅ Data received:", data)
-          console.log("✅ Data length:", data.length)
+          console.log("Data received:", data)
+          console.log("Data length:", data.length)
 
           // Filter out users already selected
           const filtered = data.filter((u: PublicUserProfile) =>
             !selectedUsers.some(selected => selected.id === u.id)
           );
-          console.log("✅ Filtered length:", filtered.length)
+          console.log("Filtered length:", filtered.length)
           setUserSearchResults(filtered);
         } else {
-          console.error("❌ Response not ok:", response.status)
+          console.error("Response not ok:", response.status)
           const errorText = await response.text()
-          console.error("❌ Error text:", errorText)
+          console.error("Error text:", errorText)
         }
       } catch (error) {
         console.error("Failed to search users", error);

@@ -1,8 +1,15 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from src.database import supabase 
+from gotrue.types import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+class AuthContext:
+    def __init__(self, user: User, token: str):
+        self.user = user
+        self.token = token
+        self.db = supabase.postgrest.auth(token)
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     """
@@ -22,10 +29,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
                 headers={"WWW-Authenticate": "Bearer"}
             )
 
-        return user 
-    except Exception:
+        return AuthContext(user=user, token=token)
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Token",
+            detail=f"Invalid Token {e.message}",
             headers={"WWW-Authenticate": "Bearer"}
         )
