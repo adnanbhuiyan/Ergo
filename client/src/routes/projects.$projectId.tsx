@@ -4,16 +4,17 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ArrowLeft, Settings, Search, UserPlus, X } from "lucide-react"
+import { ArrowLeft, Settings, Search, UserPlus, X, Mail, Briefcase } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { CreateTaskModal } from "@/components/create-task-modal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useForm } from "@tanstack/react-form"
+import { Separator } from "@/components/ui/separator"
 
 // --- Interfaces ---
 
@@ -182,7 +183,8 @@ function ProjectDetail() {
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
                                         <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-                                        {project.completed_at && <Badge variant="secondary" className="bg-green-100 text-green-800">Completed</Badge>}
+                                        {project.completed_at && <Badge variant="secondary" className="bg-gray-200 text-gray-700">Completed</Badge>}
+                                        {!project.completed_at && <Badge variant="secondary" className="bg-green-100 text-green-800">Active</Badge>}
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1 line-clamp-1 max-w-lg">{project.description}</p>
                                 </div>
@@ -193,29 +195,81 @@ function ProjectDetail() {
                                 {members.length > 0 && (
                                     <div className="flex flex-col items-end">
                                         <span className="text-xs text-gray-500 mb-1">Team Members ({members.length})</span>
-                                        <div className="flex -space-x-2 overflow-hidden hover:space-x-1 transition-all duration-200">
-                                            <TooltipProvider>
-                                                {members.slice(0, 5).map((member, index) => (
-                                                    <Tooltip key={member.user.id || index}>
-                                                        <TooltipTrigger asChild>
-                                                            <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-white cursor-default select-none">
-                                                                <AvatarImage src={member.user.profile_photo_url} alt={getDisplayName(member.user)} />
-                                                                <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
+                                        <div className="flex -space-x-2 overflow-hidden hover:space-x-1 transition-all duration-10">
+                                            
+                                            {/* Show first 5 members using Hover Cards */}
+                                            {members.slice(0, 5).map((member, index) => (
+                                                <HoverCard key={member.user.id || index}>
+                                                    <HoverCardTrigger asChild>
+                                                        <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-white cursor-pointer hover:z-10 transition-transform hover:scale-105">
+                                                            <AvatarImage src={member.user.profile_photo_url} alt={getDisplayName(member.user)} />
+                                                            <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
+                                                                {getInitials(member.user)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                    </HoverCardTrigger>
+                                                    
+                                                    <HoverCardContent className="w-80 bg-slate-900 border-slate-800 text-slate-100 shadow-xl">
+                                                        <div className="flex justify-between space-x-4">
+                                                            <Avatar className="h-12 w-12 ring-2 ring-slate-700">
+                                                                <AvatarImage src={member.user.profile_photo_url} />
+                                                                <AvatarFallback className="bg-slate-800 text-slate-300">
                                                                     {getInitials(member.user)}
                                                                 </AvatarFallback>
                                                             </Avatar>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p className="font-medium">{getDisplayName(member.user)}</p>
-                                                            <p className="text-xs text-gray-500 capitalize">{member.role}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                ))}
-                                            </TooltipProvider>
+                                                            <div className="space-y-1 flex-1">
+                                                                <h4 className="text-sm font-semibold text-white">{getDisplayName(member.user)}</h4>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge variant="outline" className="text-xs font-normal border-slate-600 text-slate-300">
+                                                                        {member.role}
+                                                                    </Badge>
+                                                                    {member.user.username && <span className="text-xs text-slate-400">@{member.user.username}</span>}
+                                                                </div>
+                                                                <div className="flex items-center pt-2">
+                                                                    <Mail className="mr-2 h-3 w-3 text-slate-500" /> 
+                                                                    <span className="text-xs text-slate-400">{member.user.email}</span>
+                                                                </div>
+                                                                {member.user.position && (
+                                                                    <div className="flex items-center pt-1">
+                                                                        <Briefcase className="mr-2 h-3 w-3 text-slate-500" />
+                                                                        <span className="text-xs text-slate-400">{member.user.position}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </HoverCardContent>
+                                                </HoverCard>
+                                            ))}
+
+                                            
                                             {members.length > 5 && (
-                                                <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 text-xs font-medium text-gray-600">
-                                                    +{members.length - 5}
-                                                </div>
+                                                <HoverCard>
+                                                    <HoverCardTrigger asChild>
+                                                        <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-200">
+                                                            +{members.length - 5}
+                                                        </div>
+                                                    </HoverCardTrigger>
+                                                    
+                                                    <HoverCardContent className="w-60 bg-slate-900 border-slate-800 text-slate-100 shadow-xl">
+                                                        <div className="space-y-2">
+                                                            <h4 className="text-sm font-medium text-slate-100">Other Members</h4>
+                                                            <Separator className="bg-slate-700" />
+                                                            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+                                                                {members.slice(5).map((member) => (
+                                                                    <div key={member.user.id} className="flex items-center gap-2">
+                                                                        <Avatar className="h-6 w-6 ring-1 ring-slate-700">
+                                                                            <AvatarImage src={member.user.profile_photo_url} />
+                                                                            <AvatarFallback className="bg-slate-800 text-slate-300 text-[10px]">
+                                                                                {getInitials(member.user)}
+                                                                            </AvatarFallback>
+                                                                        </Avatar>
+                                                                        <span className="text-sm text-slate-300 truncate">{getDisplayName(member.user)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </HoverCardContent>
+                                                </HoverCard>
                                             )}
                                         </div>
                                     </div>
@@ -242,7 +296,7 @@ function ProjectDetail() {
                                             <DialogTitle>Project Settings</DialogTitle>
                                         </DialogHeader>
                                         
-                                        {/* Render the Form Component ONLY when modal is open */}
+                                        {/* Render the Form Component only when modal is open */}
                                         {isEditModalOpen && (
                                             <EditProjectForm 
                                                 project={project} 
@@ -356,12 +410,16 @@ function EditProjectForm({ project, currentMembers, projectId, onSuccess }: Edit
                 formData.append("description", value.description)
                 formData.append("budget", String(value.budget))
                 
-                // Add the current date if project is marked as completed
-                if (value.is_completed && !project.completed_at) {
-                    formData.append("completed_at", new Date().toISOString())
-                } 
+                // Toggle if Project is Completed or Active
+                if (value.is_completed) {
+                    if (!project.completed_at) {
+                        formData.append("completed_at", new Date().toISOString())
+                    }
+                } else {
+                    formData.append("completed_at", "")
+                }
                 
-                // Send Updated Project Details
+                // Sending PUT Request for Updating Project Details
                 const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
                     method: "PUT",
                     headers: { "Authorization": `Bearer ${session?.access_token}` },
@@ -373,7 +431,7 @@ function EditProjectForm({ project, currentMembers, projectId, onSuccess }: Edit
                     throw new Error(data.detail || "Failed to update project");
                 }
 
-                // Edit Members
+                // Modify Members of Project
                 const usersToAdd = formMembers.filter(fm => !currentMembers.some(m => m.user.id === fm.id));
                 const usersToRemove = currentMembers.filter(m => !formMembers.some(fm => fm.id === m.user.id));
 
