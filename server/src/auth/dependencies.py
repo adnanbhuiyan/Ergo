@@ -5,6 +5,7 @@ from gotrue.types import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+#AuthContext class that stores the user JWT and a secure RESTful API for the Supabase PostgreSQL database
 class AuthContext:
     def __init__(self, user: User, token: str):
         self.user = user

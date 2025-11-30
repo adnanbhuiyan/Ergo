@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Form, Depends
 from fastapi import status as http_status
 from src.tasks.schemas import CreateTask, GetTask, UpdateTask
 from src.tasks.service import create_task, get_tasks_for_project, get_task, update_task, delete_task, add_dependency, remove_dependency, add_assignment, get_assignments, delete_assignment
-from src.auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_user, AuthContext
 from gotrue.types import User
 from pydantic import ValidationError, BaseModel
 from typing import Optional, List
@@ -14,7 +14,7 @@ tasks_router = APIRouter()
 @tasks_router.post("/projects/{project_id}/tasks", status_code=http_status.HTTP_201_CREATED, response_model=GetTask)
 def create_new_task(
     project_id: uuid.UUID,
-    creator: User = Depends(get_current_user),
+    ctx: AuthContext = Depends(get_current_user),
     name: str = Form(...),
     description: str = Form(...),
     priority: str = Form(...),
@@ -36,7 +36,7 @@ def create_new_task(
     except ValidationError as e:
         raise HTTPException(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors())
 
-    new_task = create_task(task_info, project_id, creator.id)
+    new_task = create_task(ctx.db, task_info, project_id, ctx.user.id)
 
 
     if "error" in new_task:
@@ -47,12 +47,12 @@ def create_new_task(
 @tasks_router.get("/projects/{project_id}/tasks", status_code=http_status.HTTP_200_OK, response_model=List[GetTask])
 def get_all_tasks_for_project(
     project_id: uuid.UUID,
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Gets information for all tasks in the project
     """
-    tasks = get_tasks_for_project(project_id)
+    tasks = get_tasks_for_project(ctx.db, project_id)
     if isinstance(tasks, dict) and "error" in tasks:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=tasks["error"])
     return tasks
@@ -60,12 +60,12 @@ def get_all_tasks_for_project(
 @tasks_router.get("/tasks/{task_id}", status_code=http_status.HTTP_200_OK, response_model=GetTask)
 def get_single_task(
     task_id: uuid.UUID,
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Gets information for a single task 
     """
-    task = get_task(task_id)
+    task = get_task(ctx.db, task_id)
     if isinstance(task, dict) and "error" in task:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=task["error"])
     return task
@@ -83,7 +83,7 @@ def update_single_task(
     expense: Optional[str] = Form(None),
     due_date: Optional[str] = Form(None),
     completed_on: Optional[str] = Form(None),
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Updates a task with the new details
@@ -99,7 +99,7 @@ def update_single_task(
     except ValidationError as e:
         raise HTTPException(status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors())
 
-    updated_task = update_task(task_id, task_update_info)
+    updated_task = update_task(ctx.db, task_id, task_update_info)
     if "error" in updated_task:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=updated_task["error"])
     return updated_task
@@ -107,12 +107,12 @@ def update_single_task(
 @tasks_router.delete("/tasks/{task_id}", status_code=http_status.HTTP_200_OK)
 def delete_single_task(
     task_id: uuid.UUID,
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Deletes a task
     """
-    delete_message = delete_task(task_id)
+    delete_message = delete_task(ctx.db, task_id)
     if "error" in delete_message:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=delete_message["error"])
     return delete_message
@@ -128,12 +128,12 @@ class DependencyRequest(BaseModel):
 def add_task_dependency(
     task_id: uuid.UUID, 
     dependency: DependencyRequest,
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Make a task dependent on another task.
     """
-    result = add_dependency(task_id, dependency.depends_on_task_id)
+    result = add_dependency(ctx.db, task_id, dependency.depends_on_task_id)
     if "error" in result:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=result["error"])
     return {"message": "Dependency added successfully"}
@@ -142,12 +142,12 @@ def add_task_dependency(
 def remove_task_dependency(
     task_id: uuid.UUID, 
     depends_on_task_id: uuid.UUID,
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Remove a dependency from a task.
     """
-    result = remove_dependency(task_id, depends_on_task_id)
+    result = remove_dependency(ctx.db, task_id, depends_on_task_id)
     if "error" in result:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=result["error"])
     
@@ -158,12 +158,12 @@ def remove_task_dependency(
 def assign_user_task(
     task_id: uuid.UUID, 
     assignee_id: uuid.UUID,
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Assigns a task to a user in the project
     """
-    task_assignment = add_assignment(task_id=task_id, assignee_id=assignee_id)
+    task_assignment = add_assignment(db=ctx.db, task_id=task_id, assignee_id=assignee_id)
 
     if "error" in task_assignment:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=task_assignment["error"])
@@ -174,12 +174,12 @@ def assign_user_task(
 @tasks_router.get("/tasks/{task_id}/assignees", status_code=http_status.HTTP_200_OK)
 def get_task_assignees(
     task_id: uuid.UUID, 
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Gets all assignees for a single task 
     """
-    task_assignees = get_assignments(task_id=task_id)
+    task_assignees = get_assignments(ctx.db, task_id=task_id)
 
     if "error" in task_assignees:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=task_assignees["error"])
@@ -190,12 +190,12 @@ def get_task_assignees(
 def remove_user_assignment(
     task_id: uuid.UUID, 
     assignee_id: uuid.UUID,
-    member: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Unassigns a user from a task 
     """
-    delete_response = delete_assignment(task_id=task_id, assignee_id=assignee_id)
+    delete_response = delete_assignment(db=ctx.db, task_id=task_id, assignee_id=assignee_id)
 
     if "error" in delete_response:
         raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=delete_response["error"])

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Form, Depends
 from src.projects.schemas import CreateProject, GetProject, UpdateProject, ProjectMember, AddProjectMember
 from src.projects.service import create_project, get_project, update_project, delete_project, get_all_projects, add_member, delete_member, all_project_members
-from src.auth.dependencies import get_current_user
+from src.auth.dependencies import get_current_user, AuthContext
 from gotrue.types import User
 from pydantic import ValidationError
 from typing import Optional
@@ -13,7 +13,7 @@ projects_router = APIRouter(
 
 @projects_router.post("", status_code=status.HTTP_201_CREATED)
 def create_new_project(
-    owner: User = Depends(get_current_user),
+    ctx: AuthContext = Depends(get_current_user),
     name: str = Form(...),
     description: str = Form(...),
     budget: float = Form(...)
@@ -33,7 +33,7 @@ def create_new_project(
             detail=e.errors() 
         )
     #print(owner.id)
-    created_project = create_project(proj_info=project_info, owner_id=owner.id)
+    created_project = create_project(db=ctx.db, proj_info=project_info, owner_id=ctx.user.id)
 
     if "error" in created_project:
         raise HTTPException(
@@ -44,11 +44,11 @@ def create_new_project(
     return created_project
 
 @projects_router.get("", status_code=status.HTTP_200_OK)
-def get_all_user_projects(owner: User = Depends(get_current_user)):
+def get_all_user_projects(ctx: AuthContext = Depends(get_current_user)):
     """
         Get all user projects
     """
-    user_projects = get_all_projects(owner.id)
+    user_projects = get_all_projects(ctx.db, ctx.user.id)
     
     if "error" in user_projects:
         raise HTTPException(
@@ -61,12 +61,12 @@ def get_all_user_projects(owner: User = Depends(get_current_user)):
 @projects_router.get("/{proj_id}", status_code=status.HTTP_200_OK, response_model=GetProject)
 def get_user_project(
     proj_id: uuid.UUID,
-    owner: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Get a specific user project
     """
-    user_project = get_project(proj_id)
+    user_project = get_project(ctx.db, proj_id)
 
     if "error" in user_project:
         raise HTTPException(
@@ -82,7 +82,7 @@ def update_user_project(
     name: Optional[str] = Form(None), 
     description: Optional[str] = Form(None),
     budget: Optional[str] = Form(None),
-    owner: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Update a specific user project
@@ -99,7 +99,7 @@ def update_user_project(
             detail=e.errors() 
         )
 
-    updated_project = update_project(proj_id, project_info)
+    updated_project = update_project(ctx.db, proj_id, project_info)
 
 
     if "error" in updated_project:
@@ -114,12 +114,12 @@ def update_user_project(
 @projects_router.delete("/{proj_id}", status_code=status.HTTP_200_OK)
 def delete_user_project(
     proj_id: uuid.UUID,
-    owner: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Delete a specific user project
     """
-    delete_message = delete_project(proj_id)
+    delete_message = delete_project(ctx.db, proj_id)
 
     if "error" in delete_message:
         raise HTTPException(
@@ -134,12 +134,12 @@ def delete_user_project(
 def add_project_member(
     proj_id: uuid.UUID, 
     member_to_add: AddProjectMember,
-    user: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Adds a user to a project 
     """
-    add_message =  add_member(proj_id=proj_id, member_to_add=member_to_add)
+    add_message =  add_member(db=ctx.db, proj_id=proj_id, member_to_add=member_to_add)
 
     if "error" in add_message:
         raise HTTPException(
@@ -154,12 +154,12 @@ def add_project_member(
 def remove_project_member(
     proj_id: uuid.UUID, 
     member_id: uuid.UUID,
-    user: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Removes a user from a project
     """
-    delete_message = delete_member(proj_id=proj_id, member_id=member_id)
+    delete_message = delete_member(db=ctx.db, proj_id=proj_id, member_id=member_id)
 
     if "error" in delete_message:
         raise HTTPException(
@@ -173,12 +173,12 @@ def remove_project_member(
 @projects_router.get("/{proj_id}/members", status_code=status.HTTP_200_OK, response_model=list[ProjectMember])
 def get_project_members(
     proj_id: uuid.UUID,
-    user: User = Depends(get_current_user)
+    ctx: AuthContext = Depends(get_current_user)
 ):
     """
         Gets all members in a project and their user profiles 
     """
-    project_members = all_project_members(proj_id=proj_id) 
+    project_members = all_project_members(db=ctx.db, proj_id=proj_id) 
 
     if "error" in project_members:
         raise HTTPException(
