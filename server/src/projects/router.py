@@ -20,7 +20,7 @@ def create_new_project(
     budget: float = Form(...)
 ):
     """
-        Create new project
+        Create new project and assign creator as Owner
     """
     try:
         project_info = CreateProject(
@@ -33,7 +33,7 @@ def create_new_project(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=e.errors() 
         )
-    #print(owner.id)
+    
     created_project = create_project(db=ctx.db, proj_info=project_info, owner_id=ctx.user.id)
 
     if "error" in created_project:
@@ -41,6 +41,12 @@ def create_new_project(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=created_project["error"]
         )
+    
+    try:
+        owner_member = AddProjectMember(user_id=ctx.user.id, role="Owner")
+        add_member(db=ctx.db, proj_id=created_project["id"], member_to_add=owner_member)
+    except Exception as e:
+        print(f"Error adding owner as member: {e}")
     
     return created_project
 

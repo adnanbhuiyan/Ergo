@@ -155,6 +155,9 @@ function ProjectDetail() {
         fetchMembers();
     };
 
+    // Get all Members Except The Current Logged In User
+    const filteredMembers = members.filter(m => m.user.id !== session?.user?.id);
+
     return (
         <div>
             {isLoading && (
@@ -194,11 +197,13 @@ function ProjectDetail() {
                             <div className="flex items-center gap-6 md:ml-auto">
                                 {members.length > 0 && (
                                     <div className="flex flex-col items-end">
+                                        
                                         <span className="text-xs text-gray-500 mb-1">Team Members ({members.length})</span>
+                                        
                                         <div className="flex -space-x-2 overflow-hidden hover:space-x-1 transition-all duration-10">
                                             
-                                            {/* Show first 5 members using Hover Cards */}
-                                            {members.slice(0, 5).map((member, index) => (
+                                            
+                                            {filteredMembers.slice(0, 5).map((member, index) => (
                                                 <HoverCard key={member.user.id || index}>
                                                     <HoverCardTrigger asChild>
                                                         <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-white cursor-pointer hover:z-10 transition-transform hover:scale-105">
@@ -242,11 +247,11 @@ function ProjectDetail() {
                                             ))}
 
                                             
-                                            {members.length > 5 && (
+                                            {filteredMembers.length > 5 && (
                                                 <HoverCard>
                                                     <HoverCardTrigger asChild>
                                                         <div className="flex items-center justify-center h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-200">
-                                                            +{members.length - 5}
+                                                            +{filteredMembers.length - 5}
                                                         </div>
                                                     </HoverCardTrigger>
                                                     
@@ -255,7 +260,7 @@ function ProjectDetail() {
                                                             <h4 className="text-sm font-medium text-slate-100">Other Members</h4>
                                                             <Separator className="bg-slate-700" />
                                                             <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
-                                                                {members.slice(5).map((member) => (
+                                                                {filteredMembers.slice(5).map((member) => (
                                                                     <div key={member.user.id} className="flex items-center gap-2">
                                                                         <Avatar className="h-6 w-6 ring-1 ring-slate-700">
                                                                             <AvatarImage src={member.user.profile_photo_url} />
@@ -296,7 +301,7 @@ function ProjectDetail() {
                                             <DialogTitle>Project Settings</DialogTitle>
                                         </DialogHeader>
                                         
-                                        {/* Render the Form Component only when modal is open */}
+                                        {/* Render the Form Component ONLY when modal is open */}
                                         {isEditModalOpen && (
                                             <EditProjectForm 
                                                 project={project} 
@@ -410,7 +415,7 @@ function EditProjectForm({ project, currentMembers, projectId, onSuccess }: Edit
                 formData.append("description", value.description)
                 formData.append("budget", String(value.budget))
                 
-                // Toggle if Project is Completed or Active
+                // Logic for Toggling Between Active and Completed
                 if (value.is_completed) {
                     if (!project.completed_at) {
                         formData.append("completed_at", new Date().toISOString())
@@ -419,7 +424,7 @@ function EditProjectForm({ project, currentMembers, projectId, onSuccess }: Edit
                     formData.append("completed_at", "")
                 }
                 
-                // Sending PUT Request for Updating Project Details
+                // PUT Request to Update Project Details
                 const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
                     method: "PUT",
                     headers: { "Authorization": `Bearer ${session?.access_token}` },
@@ -431,7 +436,7 @@ function EditProjectForm({ project, currentMembers, projectId, onSuccess }: Edit
                     throw new Error(data.detail || "Failed to update project");
                 }
 
-                // Modify Members of Project
+                // Modify Members
                 const usersToAdd = formMembers.filter(fm => !currentMembers.some(m => m.user.id === fm.id));
                 const usersToRemove = currentMembers.filter(m => !formMembers.some(fm => fm.id === m.user.id));
 

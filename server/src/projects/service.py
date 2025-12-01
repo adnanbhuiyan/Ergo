@@ -61,13 +61,39 @@ def delete_project(db, proj_id: uuid.UUID):
     except Exception as e:
         return {"error": str(e)}
 
-def get_all_projects(db, owner_id: uuid.UUID):
+def get_all_projects(db, user_id: uuid.UUID):
     """
-        Gets all projects a user is part of
+        Gets all projects a user is part of (either as owner or member)
     """
     try:
-        response = db.from_("projects").select("*").eq("owner_id", str(owner_id)).execute()
-        return response.data
+        user_id_str = str(user_id)
+
+        owned_response = db.from_("projects")\
+            .select("*")\
+            .eq("owner_id", user_id_str)\
+            .execute()
+        
+        owned_projects = owned_response.data if owned_response.data else []
+
+        member_response = db.from_("project_members")\
+            .select("projects(*)")\
+            .eq("user_id", user_id_str)\
+            .execute()
+        
+    
+        member_projects = []
+        if member_response.data:
+            for item in member_response.data:
+                if item.get('projects'): 
+                    member_projects.append(item['projects'])
+
+        all_projects = owned_projects + member_projects
+
+      
+        unique_projects_map = {proj['id']: proj for proj in all_projects}
+        
+        return list(unique_projects_map.values())
+
     except Exception as e:
         return {"error": str(e)}
     
