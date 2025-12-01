@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "../contexts/AuthContext";
-import Navbar from "@/components/ui/navbar"; 
+import { useAuth } from "../contexts/AuthContext"; 
 
 interface File {}
 
@@ -114,9 +113,7 @@ function Register() {
   };
 
   return (
-    <>
-      <Navbar />
-      <div className="h-screen w-screen flex">
+    <div className="min-h-screen w-screen flex">
         {/* Left Column displaying 'Ergo' and Promotion */}
         <div className="hidden lg:flex lg:w-1/2 bg-slate-600 flex-col justify-center items-center p-8">
           <h1 className="text-6xl font-bold text-white mb-8">Ergo</h1>
@@ -129,6 +126,12 @@ function Register() {
         {/* Right Column displaying the Registration Form */}
         <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center p-8">
           <div className="w-full max-w-md">
+            <Link to="/" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to home
+            </Link>
             <h2 className="text-2xl font-semibold text-gray-800 mb-2">
               Create Account
             </h2>
@@ -312,17 +315,16 @@ function Register() {
             {/* Login Link */}
             <p className="text-center text-sm text-gray-600 mt-6">
               Already have an account?{" "}
-              <a
-                href="/login"
+              <Link
+                to="/login"
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 Sign In
-              </a>
+              </Link>
             </p>
           </div>
         </div>
       </div>
-    </>
   );
 }
 

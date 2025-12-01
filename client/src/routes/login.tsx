@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useNavigate } from "@tanstack/react-router";
-import { useAuth } from "../contexts/AuthContext";
-import Navbar from "@/components/ui/navbar"; 
+import { useNavigate, Link } from "@tanstack/react-router";
+import { useAuth } from "../contexts/AuthContext"; 
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -66,9 +65,7 @@ function Login() {
   };
 
   return (
-    <>
-      <Navbar />
-      <div className="h-screen w-screen flex">
+    <div className="min-h-screen w-screen flex">
         {/* Left Column - Promotional Section */}
         <div className="hidden lg:flex lg:w-1/2 bg-slate-600 flex-col items-center justify-center px-12">
           <h1 className="text-6xl font-bold text-white mb-8">Ergo</h1>
@@ -81,6 +78,12 @@ function Login() {
         {/* Right Column - Login Form */}
         <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center px-8 py-12">
           <div className="w-full max-w-md">
+            <Link to="/" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to home
+            </Link>
             <h2 className="text-2xl font-semibold text-gray-800 mb-8">
               Log In Below
             </h2>
@@ -166,7 +169,6 @@ function Login() {
           </div>
         </div>
       </div>
-    </>
   );
 }
 

@@ -1,11 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Button } from "@/components/ui/button";
-import { Link } from '@tanstack/react-router';
-import Landing from "../assets/landing.svg"; 
+import { Link, useNavigate } from '@tanstack/react-router';
 import Navbar from "@/components/ui/navbar"; 
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../contexts/AuthContext";
+import { CheckCircle2, Users, FileText, Zap } from "lucide-react";
 
 export const Route = createFileRoute('/')({
   component: RouteComponent,
@@ -13,7 +12,6 @@ export const Route = createFileRoute('/')({
 
 function RouteComponent() {
   const navigate = useNavigate();
-  
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -23,38 +21,59 @@ function RouteComponent() {
   }, [isAuthenticated, navigate]);
 
   return (
-      <>
-        <Navbar />
-        <div className="flex h-screen w-full items-center justify-center bg-slate-600">
-        <div className="container mx-auto grid grid-cols-1 items-center gap-12 px-4 md:grid-cols-2 lg:gap-20">
-          <div className="flex flex-col items-start text-left text-white">
-            <h1 className="mb-4 text-6xl font-bold leading-tight md:text-6xl lg:text-9xl">
-              Ergo
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Hero Section */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-28">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Main Headline */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+              Transform your workflow with{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-slate-600">
+                Ergo
+              </span>
             </h1>
-            <p className="mb-8 text-lg text-gray-200 md:text-xl">
-              Collaborate and manage your projects with your team
+
+            {/* Description */}
+            <p className="text-lg sm:text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+              We're here to transform the intricacies of your life, providing a user-friendly platform that not only manages your tasks effortlessly but also enhances your overall efficiency.
             </p>
-            <div className="flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-              <Link to="/login">
-                <Button variant="outline" size="lg">
-                  Login
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button variant="outline" size="lg" className="bg-transparent text-white hover:bg-white hover:text-slate-600">
-                  Register
-                </Button>
-              </Link>
 
+            {/* CTA Button */}
+            <Link to="/register">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                Get Started
+              </Button>
+            </Link>
+
+            {/* Feature Icons */}
+            <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
+              <div className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Task Management</span>
+              </div>
+              <div className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Users className="w-6 h-6 text-green-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Team Collaboration</span>
+              </div>
+              <div className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-purple-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Project Tracking</span>
+              </div>
+              <div className="flex flex-col items-center gap-3 p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-orange-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Boost Productivity</span>
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center justify-center">
-            <img
-              src={Landing}
-              alt="Recruiting process illustration"
-              className="w-full max-w-lg rounded-lg object-cover"
-            />
           </div>
         </div>
       </div>

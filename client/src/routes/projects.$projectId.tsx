@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useForm } from "@tanstack/react-form"
 import { Separator } from "@/components/ui/separator"
+import { GanttChart } from "@/components/gantt-chart"
 
 // --- Interfaces ---
 
@@ -365,7 +366,13 @@ function ProjectDetail() {
                             </div>
                         </TabsContent>
                         <TabsContent value="gantt" className="p-6">
-                            <p className="text-gray-500 text-center py-8">Gantt Chart</p>
+                            {tasksLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <Spinner /> Loading tasks...
+                                </div>
+                            ) : (
+                                <GanttChart tasks={tasks} />
+                            )}
                         </TabsContent>
                     </Tabs>
                 </div>
