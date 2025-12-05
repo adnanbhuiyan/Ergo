@@ -451,7 +451,7 @@ function RouteComponent() {
                   {isSubmitting ? (
                     <div className="flex items-center gap-2">
                       <Spinner className="h-4 w-4" />
-                      <span>Creating & Inviting...</span>
+                      <span>Creating & Inviting Users...</span>
                     </div>
                   ) : "Create Project"}
                 </Button>
