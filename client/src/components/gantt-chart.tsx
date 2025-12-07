@@ -11,6 +11,14 @@ interface Task {
   estimated_completion_time?: number | null;
   actual_completion_time?: number | null;
   completed_on?: string | null;
+  depends_on?: TaskDependency[];
+  blocking?: TaskDependency[];
+}
+
+interface TaskDependency {
+  id: string;
+  name: string;
+  status: string;
 }
 
 interface GanttChartProps {
@@ -33,7 +41,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
     tasks.forEach((task) => {
       const startDate = new Date(task.created_at);
       const endDate = new Date(task.due_date);
-      
+
       if (startDate < earliestStart) earliestStart = startDate;
       if (endDate > latestEnd) latestEnd = endDate;
     });
@@ -69,23 +77,23 @@ export function GanttChart({ tasks }: GanttChartProps) {
   const getTaskBarStyle = (task: Task) => {
     const startDate = new Date(task.created_at);
     let endDate = new Date(task.due_date);
-    
+
     // If due_date is before created_at, use estimated_completion_time
     if (endDate < startDate && task.estimated_completion_time) {
       endDate = new Date(startDate);
       endDate.setHours(endDate.getHours() + (task.estimated_completion_time || 0));
     }
-    
+
     // Ensure end date is at least 1 day after start
     if (endDate <= startDate) {
       endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 1);
     }
-    
+
     const daysFromStart = Math.floor(
       (startDate.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
     );
-    
+
     const duration = Math.ceil(
       (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -129,6 +137,20 @@ export function GanttChart({ tasks }: GanttChartProps) {
     }
   };
 
+  const getTooltipText = (task: Task) => {
+    let tooltip = `${task.name}\nPriority: ${task.priority}\nStatus: ${task.status}\nStart: ${new Date(task.created_at).toLocaleDateString()}\nDue: ${new Date(task.due_date).toLocaleDateString()}`;
+
+    if (task.depends_on && task.depends_on.length > 0) {
+      tooltip += `\n\nDepends on:\n${task.depends_on.map(d => `  • ${d.name} (${d.status})`).join('\n')}`;
+    }
+
+    if (task.blocking && task.blocking.length > 0) {
+      tooltip += `\n\nBlocking:\n${task.blocking.map(d => `  • ${d.name} (${d.status})`).join('\n')}`;
+    }
+
+    return tooltip;
+  }
+
   if (tasks.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
@@ -140,7 +162,7 @@ export function GanttChart({ tasks }: GanttChartProps) {
   return (
     <div className="w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
       {/* Header with date scale */}
-      <div className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
+      <div className="sticky top-0 z-40 bg-gray-50 border-b border-gray-200">
         <div className="flex">
           {/* Task name column header */}
           <div className="w-64 flex-shrink-0 p-3 border-r border-gray-200 font-semibold text-sm text-gray-700">
@@ -158,9 +180,8 @@ export function GanttChart({ tasks }: GanttChartProps) {
               return (
                 <div
                   key={index}
-                  className={`relative flex-1 min-w-[40px] border-r border-gray-200 p-2 text-center text-xs ${
-                    isWeekend ? "bg-gray-100" : "bg-white"
-                  } ${isToday ? "bg-blue-50 border-blue-300" : ""}`}
+                  className={`relative flex-1 min-w-[40px] border-r border-gray-200 p-2 text-center text-xs ${isWeekend ? "bg-gray-100" : "bg-white"
+                    } ${isToday ? "bg-blue-50 border-blue-300" : ""}`}
                 >
                   {isFirstOfMonth && (
                     <div className="font-semibold text-gray-700 mb-1">
@@ -188,16 +209,29 @@ export function GanttChart({ tasks }: GanttChartProps) {
         {tasks.map((task, taskIndex) => {
           const barStyle = getTaskBarStyle(task);
           const isCompleted = task.status === "Completed" || task.completed_on !== null;
+          const hasDependencies = (task.depends_on && task.depends_on.length > 0) || (task.blocking && task.blocking.length > 0);
 
           return (
             <div key={task.id} className="flex hover:bg-gray-50 transition-colors">
               {/* Task name column */}
               <div className="w-64 flex-shrink-0 p-3 border-r border-gray-200">
                 <div className="flex items-center gap-2">
-                  <div
-                    className={`w-3 h-3 rounded-full ${getStatusColor(task.status)}`}
-                    title={task.status}
-                  />
+                  <div className="relative">
+                    <div
+                      className={`w-3 h-3 rounded-full ${getStatusColor(task.status)}`}
+                      title={task.status}
+                    />
+                    {hasDependencies && (
+                      <div className="absolute -top-1 -right-1 flex gap-0.5">
+                        {task.depends_on && task.depends_on.length > 0 && (
+                          <div className="w-2 h-2 rounded-full bg-blue-400 border border-white" title="Has dependencies" />
+                        )}
+                        {task.blocking && task.blocking.length > 0 && (
+                          <div className="w-2 h-2 rounded-full bg-orange-400 border border-white" title="Blocking tasks" />
+                        )}
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm text-gray-900 truncate" title={task.name}>
                       {task.name}
@@ -206,12 +240,48 @@ export function GanttChart({ tasks }: GanttChartProps) {
                       {new Date(task.created_at).toLocaleDateString()} -{" "}
                       {new Date(task.due_date).toLocaleDateString()}
                     </div>
+                    {hasDependencies && (
+                      <div className="mt-2 space-y-1">
+                        {task.depends_on && task.depends_on.length > 0 && (
+                          <div>
+                            <div className="text-[10px] font-medium text-blue-600 mb-0.5">Depends on:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {task.depends_on.map((dep: TaskDependency) => (
+                                <span
+                                  key={dep.id}
+                                  className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200"
+                                  title={`Status: ${dep.status}`}
+                                >
+                                  {dep.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {task.blocking && task.blocking.length > 0 && (
+                          <div>
+                            <div className="text-[10px] font-medium text-orange-600 mb-0.5">Blocking:</div>
+                            <div className="flex flex-wrap gap-1">
+                              {task.blocking.map((dep: TaskDependency) => (
+                                <span
+                                  key={dep.id}
+                                  className="text-[10px] px-1.5 py-0.5 bg-orange-50 text-orange-700 rounded border border-orange-200"
+                                  title={`Status: ${dep.status}`}
+                                >
+                                  {dep.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Timeline column */}
-              <div className="flex-1 relative min-w-[800px] p-2">
+              <div className="flex-1 relative min-w-[800px] p-2 overflow-visible">
                 <div className="relative h-12">
                   {/* Today indicator line - shown on first task row */}
                   {taskIndex === 0 && (() => {
@@ -231,20 +301,29 @@ export function GanttChart({ tasks }: GanttChartProps) {
                     }
                     return null;
                   })()}
-                  
+
                   {/* Task bar */}
                   <div
                     className={`absolute top-1/2 -translate-y-1/2 h-8 rounded-md ${getPriorityColor(
                       task.priority
-                    )} ${isCompleted ? "opacity-60" : ""} shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${
-                      isCompleted ? "border-green-300" : "border-white"
-                    }`}
+                    )} ... relative group ${isCompleted ? "opacity-60" : ""} shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${isCompleted ? "border-green-300" : hasDependencies ? "border-blue-300" : "border-white"
+                      }`}
                     style={barStyle}
-                    title={`${task.name}\nPriority: ${task.priority}\nStatus: ${task.status}\nStart: ${new Date(task.created_at).toLocaleDateString()}\nDue: ${new Date(task.due_date).toLocaleDateString()}`}
+                    title={getTooltipText(task)}
                   >
                     <div className="h-full flex items-center px-2 text-white text-xs font-medium truncate">
                       {barStyle.width && parseFloat(barStyle.width) > 5 ? task.name : ""}
                     </div>
+                    {hasDependencies && (
+                      <div className="absolute -top-1 right-1 flex gap-0.5">
+                        {task.depends_on && task.depends_on.length > 0 && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-300 border border-white shadow-sm" />
+                        )}
+                        {task.blocking && task.blocking.length > 0 && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-orange-300 border border-white shadow-sm" />
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -276,6 +355,14 @@ export function GanttChart({ tasks }: GanttChartProps) {
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
             <span className="text-gray-600">In Progress</span>
+          </div>
+          <div className="flex items-center gap-2 ml-4">
+            <div className="w-2 h-2 bg-blue-400 rounded-full border border-white"></div>
+            <span className="text-gray-600">Has Dependencies</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-orange-400 rounded-full border border-white"></div>
+            <span className="text-gray-600">Blocking Tasks</span>
           </div>
         </div>
       </div>

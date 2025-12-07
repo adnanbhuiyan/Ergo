@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ArrowLeft, Settings, Search, UserPlus, X, Mail, Briefcase } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { CreateTaskModal } from "@/components/create-task-modal"
+import { EditTaskModal } from "@/components/edit-task-modal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -38,6 +39,31 @@ interface SelectedUser extends User {
     role: string;
 }
 
+interface TaskDependency {
+    id: string;
+    name: string,
+    status: string
+}
+
+interface Task {
+    id: string;
+    name: string
+    description: string,
+    priority: string;
+    status: string;
+    due_date: string;
+    created_at: string;
+    budget: number;
+    expense: number;
+    estimated_completion_time: number | null;
+    actual_completed_time: number | null;
+    completed_on: string | null;
+    project_id: string;
+    created_by: string;
+    depends_on: TaskDependency[];
+    blocking: TaskDependency[];
+}
+
 export const Route = createFileRoute("/projects/$projectId")({
     component: ProjectDetail,
 })
@@ -56,9 +82,11 @@ function ProjectDetail() {
     const [error, setError] = useState("")
     const [tasks, setTasks] = useState<any[]>([])
     const [tasksLoading, setTasksLoading] = useState(false)
-    
+
     // --- Edit Modal State ---
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isEditTaskOpen, setIsEditTaskOpen] = useState(false)
+    const [editingTask, setEditingTask] = useState<Task | null>(null)
 
     const columns = ["To-Do", "In-Progress", "In-Review", "Blocked", "Completed"]
 
@@ -201,15 +229,15 @@ function ProjectDetail() {
                                 </div>
                             </div>
 
-                           
+
                             <div className="flex items-center gap-6 md:ml-auto">
                                 {members.length > 0 && (
                                     <div className="flex flex-col items-end">
-                                        
+
                                         <span className="text-xs text-gray-500 mb-1">Team Members ({members.length})</span>
-                                        
+
                                         <div className="flex -space-x-2 overflow-hidden hover:space-x-1 transition-all duration-10">
-                                            
+
                                             {/* Filtered Members Avatars */}
                                             {filteredMembers.slice(0, 5).map((member, index) => (
                                                 <HoverCard key={member.user.id || index}>
@@ -221,7 +249,7 @@ function ProjectDetail() {
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     </HoverCardTrigger>
-                                                    
+
                                                     <HoverCardContent className="w-80 bg-slate-900 border-slate-800 text-slate-100 shadow-xl">
                                                         <div className="flex justify-between space-x-4">
                                                             <Avatar className="h-12 w-12 ring-2 ring-slate-700">
@@ -239,7 +267,7 @@ function ProjectDetail() {
                                                                     {member.user.username && <span className="text-xs text-slate-400">@{member.user.username}</span>}
                                                                 </div>
                                                                 <div className="flex items-center pt-2">
-                                                                    <Mail className="mr-2 h-3 w-3 text-slate-500" /> 
+                                                                    <Mail className="mr-2 h-3 w-3 text-slate-500" />
                                                                     <span className="text-xs text-slate-400">{member.user.email}</span>
                                                                 </div>
                                                                 {member.user.position && (
@@ -254,7 +282,7 @@ function ProjectDetail() {
                                                 </HoverCard>
                                             ))}
 
-                                            
+
                                             {filteredMembers.length > 5 && (
                                                 <HoverCard>
                                                     <HoverCardTrigger asChild>
@@ -262,7 +290,7 @@ function ProjectDetail() {
                                                             +{filteredMembers.length - 5}
                                                         </div>
                                                     </HoverCardTrigger>
-                                                    
+
                                                     <HoverCardContent className="w-60 bg-slate-900 border-slate-800 text-slate-100 shadow-xl">
                                                         <div className="space-y-2">
                                                             <h4 className="text-sm font-medium text-slate-100">Other Members</h4>
@@ -297,7 +325,7 @@ function ProjectDetail() {
                                     </p>
                                 </div>
 
-                            
+
                                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="icon" className="ml-2">
@@ -308,15 +336,15 @@ function ProjectDetail() {
                                         <DialogHeader>
                                             <DialogTitle>Project Settings {isOwner ? "" : "(Viewer Permissions Only)"}</DialogTitle>
                                         </DialogHeader>
-                                        
+
                                         {/* Render the Form Component only when modal is open */}
                                         {isEditModalOpen && (
-                                            <EditProjectForm 
-                                                project={project} 
-                                                currentMembers={members} 
-                                                projectId={projectId} 
+                                            <EditProjectForm
+                                                project={project}
+                                                currentMembers={members}
+                                                projectId={projectId}
                                                 isOwner={isOwner}
-                                                onSuccess={handleProjectUpdate} 
+                                                onSuccess={handleProjectUpdate}
                                             />
                                         )}
                                     </DialogContent>
@@ -356,18 +384,72 @@ function ProjectDetail() {
                                         </div>
                                         <div className="space-y-3 min-h-[200px]">
                                             {tasks.filter(t => t.status === columnStatus).map((task) => (
-                                                <div key={task.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" >
+                                                <div
+                                                    key={task.id}
+                                                    className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setEditingTask(task);
+                                                        setIsEditTaskOpen(true);
+                                                    }}
+                                                >
                                                     <h4 className="font-medium text-gray-900 mb-2">{task.name}</h4>
                                                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
+
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <Badge className={task.priority === "High" ? "bg-red-100 text-red-800" : task.priority === "Medium" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}>{task.priority}</Badge>
-                                                        <div className="flex items-center gap-1 text-xs text-gray-500"><span>Due:</span><span>{new Date(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span></div>
+                                                        <Badge className={
+                                                            task.priority === "High" ? "bg-red-100 text-red-800" :
+                                                                task.priority === "Medium" ? "bg-yellow-100 text-yellow-800" :
+                                                                    "bg-green-100 text-green-800"
+                                                        }>
+                                                            {task.priority}
+                                                        </Badge>
+                                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                            <span>Due:</span>
+                                                            <span>{new Date(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                                        </div>
                                                     </div>
+
+                                                    {/* Task Dependencies */}
+                                                    {(task.depends_on?.length > 0 || task.blocking?.length > 0) && (
+                                                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                                                            {task.depends_on?.length > 0 && (
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-gray-500 mb-1">Depends on:</p>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {task.depends_on.map((dep: TaskDependency) => (
+                                                                            <span
+                                                                                key={dep.id}
+                                                                                className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200"
+                                                                                title={`Status: ${dep.status}`}
+                                                                            >
+                                                                                {dep.name}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {task.blocking?.length > 0 && (
+                                                                <div>
+                                                                    <p className="text-xs font-medium text-gray-500 mb-1">Blocking:</p>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {task.blocking.map((dep: TaskDependency) => (
+                                                                            <span
+                                                                                key={dep.id}
+                                                                                className="text-xs px-2 py-0.5 bg-orange-50 text-orange-700 rounded border border-orange-200"
+                                                                                title={`Status: ${dep.status}`}
+                                                                            >
+                                                                                {dep.name}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
-                                            {tasks.filter(t => t.status === columnStatus).length === 0 && (
-                                                <p className="text-sm text-gray-400 text-center py-4">No Tasks</p>
-                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -385,6 +467,23 @@ function ProjectDetail() {
                     </Tabs>
                 </div>
             )}
+
+            {/* Edit Task Modal */}
+            {editingTask && (
+                <EditTaskModal
+                    task={editingTask}
+                    isOpen={isEditTaskOpen}
+                    onClose={() => {
+                        setIsEditTaskOpen(false);
+                        setEditingTask(null);
+                    }}
+                    onSuccess={() => {
+                        fetchTasks();
+                        setIsEditTaskOpen(false);
+                        setEditingTask(null);
+                    }}
+                />
+            )}
         </div>
     )
 }
@@ -395,7 +494,7 @@ interface EditProjectFormProps {
     project: any;
     currentMembers: ProjectMember[];
     projectId: string;
-    isOwner: boolean; 
+    isOwner: boolean;
     onSuccess: () => void;
 }
 
@@ -403,12 +502,12 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
     const { session } = useAuth();
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateError, setUpdateError] = useState("");
-    
+
     // Member search state
     const [userQuery, setUserQuery] = useState("");
     const [userSearchResults, setUserSearchResults] = useState<User[]>([]);
     const [isSearchingUsers, setIsSearchingUsers] = useState(false);
-    
+
     // Form state for members (initialized from props)
     const [formMembers, setFormMembers] = useState<SelectedUser[]>(
         currentMembers.map(m => ({ ...m.user, role: m.role }))
@@ -426,13 +525,13 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
 
             setUpdateError("")
             setIsUpdating(true)
-            
+
             try {
                 const formData = new FormData()
                 formData.append("name", value.name)
                 formData.append("description", value.description)
                 formData.append("budget", String(value.budget))
-                
+
                 // Logic for Toggling Between Active and Completed
                 if (value.is_completed) {
                     if (!project.completed_at) {
@@ -441,7 +540,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 } else {
                     formData.append("completed_at", "")
                 }
-                
+
                 // PUT Request to Update Project Details
                 const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
                     method: "PUT",
@@ -459,7 +558,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 const usersToRemove = currentMembers.filter(m => !formMembers.some(fm => fm.id === m.user.id));
 
                 await Promise.all([
-                    ...usersToAdd.map(u => 
+                    ...usersToAdd.map(u =>
                         fetch(`http://localhost:8000/projects/${projectId}/members`, {
                             method: "POST",
                             headers: {
@@ -469,7 +568,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                             body: JSON.stringify({ user_id: u.id, role: u.role })
                         })
                     ),
-                    ...usersToRemove.map(m => 
+                    ...usersToRemove.map(m =>
                         fetch(`http://localhost:8000/projects/${projectId}/members/${m.user.id}`, {
                             method: "DELETE",
                             headers: { "Authorization": `Bearer ${session?.access_token}` }
@@ -542,9 +641,9 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
         <form onSubmit={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            if(isOwner) editForm.handleSubmit()
+            if (isOwner) editForm.handleSubmit()
         }} className="space-y-4">
-            
+
             {updateError && (
                 <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4 text-sm">{updateError}</div>
             )}
@@ -556,13 +655,13 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 {(field) => (
                     <div>
                         <Label htmlFor="name">Project Name</Label>
-                        <Input 
-                            id="name" 
+                        <Input
+                            id="name"
                             disabled={!isOwner}
-                            value={field.state.value} 
-                            onBlur={field.handleBlur} 
-                            onChange={(e) => field.handleChange(e.target.value)} 
-                            className="mt-1" 
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            className="mt-1"
                         />
                         {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
                     </div>
@@ -576,13 +675,13 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 {(field) => (
                     <div>
                         <Label htmlFor="description">Description</Label>
-                        <Input 
-                            id="description" 
+                        <Input
+                            id="description"
                             disabled={!isOwner}
-                            value={field.state.value} 
-                            onBlur={field.handleBlur} 
-                            onChange={(e) => field.handleChange(e.target.value)} 
-                            className="mt-1" 
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            className="mt-1"
                         />
                         {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
                     </div>
@@ -596,14 +695,14 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 {(field) => (
                     <div>
                         <Label htmlFor="budget">Budget</Label>
-                        <Input 
-                            type="number" 
-                            id="budget" 
+                        <Input
+                            type="number"
+                            id="budget"
                             disabled={!isOwner}
-                            value={field.state.value} 
-                            onBlur={field.handleBlur} 
-                            onChange={(e) => field.handleChange(Number(e.target.value))} 
-                            className="mt-1" 
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(Number(e.target.value))}
+                            className="mt-1"
                         />
                         {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
                     </div>
@@ -614,11 +713,11 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             <editForm.Field name="is_completed">
                 {(field) => (
                     <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox 
-                            id="is_completed" 
+                        <Checkbox
+                            id="is_completed"
                             disabled={!isOwner}
-                            checked={field.state.value} 
-                            onCheckedChange={(checked) => field.handleChange(checked === true)} 
+                            checked={field.state.value}
+                            onCheckedChange={(checked) => field.handleChange(checked === true)}
                         />
                         <Label htmlFor="is_completed" className="font-normal">Mark project as completed</Label>
                     </div>
@@ -628,7 +727,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             {/* Manage Members */}
             <div className="pt-4 border-t border-gray-100">
                 <Label>Manage Team Members</Label>
-                
+
                 {/* Search - Hide if not owner */}
                 {isOwner && (
                     <div className="relative mt-2">

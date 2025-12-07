@@ -82,7 +82,7 @@ def update_task(db, task_id: uuid.UUID, task_update: UpdateTask):
             else: 
                 task_info[key] = old_task[key]
 
-        response = db.from_("tasks").update(task_info).eq("id", str(task_id)).execute()
+        response = db.from_("tasks").update(jsonable_encoder(task_info)).eq("id", str(task_id)).execute()
         
         if not response.data:
             return {"error": "Task not found"}
