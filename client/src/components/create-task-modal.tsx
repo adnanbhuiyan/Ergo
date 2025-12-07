@@ -1,18 +1,25 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox" 
 import { useForm } from "@tanstack/react-form"
 import { useAuth } from "@/contexts/AuthContext";
 import { Textarea } from "./ui/textarea";
 
 interface CreateTaskModalProps {
     projectId: string,
-    onTaskCreated: () => void // Callback function to refresh tasks after creation
-    trigger: ReactNode // Button that opens the modal
+    onTaskCreated: () => void
+    trigger: ReactNode
     defaultStatus?: string
+}
+
+// Interface for fetching existing tasks
+interface SimpleTask {
+    id: string;
+    name: string;
 }
 
 export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStatus = "To-Do" }: CreateTaskModalProps) {
@@ -20,6 +27,30 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+    
+    // State to hold existing tasks for the dependency list
+    const [existingTasks, setExistingTasks] = useState<SimpleTask[]>([])
+
+    // Fetch existing tasks when modal opens
+    useEffect(() => {
+        if (isOpen && projectId && session?.access_token) {
+            const fetchTasks = async () => {
+                try {
+                    const response = await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
+                        method: "GET",
+                        headers: { "Authorization": `Bearer ${session.access_token}` }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setExistingTasks(data);
+                    }
+                } catch (err) {
+                    console.error("Failed to load existing tasks for dependencies", err);
+                }
+            };
+            fetchTasks();
+        }
+    }, [isOpen, projectId, session]);
 
     const form = useForm({
         defaultValues: {
@@ -30,7 +61,8 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
             estimated_completion_time: 0,
             budget: 0,
             expense: 0,
-            due_date: ""
+            due_date: "",
+            dependency_task_ids: [] as string[] 
         },
         onSubmit: async ({ value }) => {
             setError("")
@@ -47,6 +79,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
             formData.append("due_date", value.due_date)
 
             try {
+                // Create the Task
                 const response = await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${session?.access_token}` },
@@ -57,8 +90,6 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
 
                 if (!response.ok) {
                     let errorMessage = "Failed to create task. Please check your inputs"
-
-
                     if (data.detail && Array.isArray(data.detail)) {
                         errorMessage = data.detail.map((err: any) => {
                             const field = err.loc[err.loc.length - 1];
@@ -67,53 +98,54 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     } else if (typeof data.detail === "string") {
                         errorMessage = data.detail
                     }
-
-                    setError(errorMessage);
-                    setIsLoading(false)
-                    return
+                    throw new Error(errorMessage);
                 }
 
                 const createdTask = data
 
-                if (!user?.id) {
-                    console.error("Cannot assign task: user not found")
-                    setIsOpen(false)
-                    setError("")
-                    form.reset()
-                    onTaskCreated()
-                    setIsLoading(false)
+                // Assign the Task to the User
+                if (user?.id) {
+                    try {
+                        await fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user.id}`, {
+                            method: 'POST',
+                            headers: { "Authorization": `Bearer ${session?.access_token}` }
+                        })
+                    } catch (err) {
+                        console.error("Error assigning task:", err)
+                    }
                 }
 
-                try {
-                    const assignUrl = `http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user?.id}`
-                    console.log("Assignment URL:", assignUrl)
-
-                    const assignResponse = await fetch(assignUrl, {
-                        method: 'POST',
-                        headers: { "Authorization": `Bearer ${session?.access_token}` }
-                    })
-
-                    if (!assignResponse.ok) {
-                        const errorData = await assignResponse.json()
-                        console.error("Assignment failed - Status:", assignResponse.status)
-                        console.error("Assignment failed - Error:", errorData)
-                    } else {
-                        console.log("Task assigned successfully")
+                // Add Multiple Dependencies
+                if (value.dependency_task_ids.length > 0) {
+                    try {
+                        // Execute all dependency additions in parallel
+                        await Promise.all(
+                            value.dependency_task_ids.map(depId => 
+                                fetch(`http://localhost:8000/tasks/${createdTask.id}/dependencies`, {
+                                    method: 'POST',
+                                    headers: { 
+                                        "Authorization": `Bearer ${session?.access_token}`,
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify({
+                                        depends_on_task_id: depId
+                                    })
+                                })
+                            )
+                        );
+                    } catch (err) {
+                        console.error("Error adding dependencies:", err)
                     }
-
-                } catch (err) {
-                    console.error("Error assigning task:", err)
                 }
 
                 setIsOpen(false)
                 setError("")
                 form.reset()
                 onTaskCreated()
-                setIsLoading(false)
-
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Error creating task:", err)
-                setError("Network error. Please try again.")
+                setError(err.message || "Network error. Please try again.")
+            } finally {
                 setIsLoading(false)
             }
         }
@@ -124,7 +156,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
             <DialogTrigger asChild={true}>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] bg-white max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] bg-white z-50 max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Create New Task</DialogTitle>
                 </DialogHeader>
@@ -134,16 +166,15 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     </div>
                 )}
                 <form onSubmit={(e) => {
-                    e.preventDefault() // Stops page refresh
-                    e.stopPropagation() // Stops event bubbling
-                    form.handleSubmit() // Triggers tanstack form submission
+                    e.preventDefault()
+                    e.stopPropagation()
+                    form.handleSubmit()
                 }} className="space-y-4">
 
                     {/* Name Field */}
                     <form.Field name="name" validators={{
                         onChange: ({ value }) => {
                             if (value.length < 3) return "Name must be at least 3 characters.";
-
                         }
                     }}>
                         {(field) => (
@@ -186,147 +217,180 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                         )}
                     </form.Field>
 
-                    {/* Priority Field */}
-                    <form.Field name="priority">
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Priority Field */}
+                        <form.Field name="priority">
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="priority">Priority *</Label>
+                                    <Select value={field.state.value} onValueChange={field.handleChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Priority"></SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="z-100 bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
+                                            <SelectItem value="Low">Low</SelectItem>
+                                            <SelectItem value="Medium">Medium</SelectItem>
+                                            <SelectItem value="High">High</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </form.Field>
+
+                        {/* Status Field */}
+                        <form.Field name="status">
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="status">Status *</Label>
+                                    <Select value={field.state.value} onValueChange={field.handleChange}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Status"></SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="z-100 bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
+                                            <SelectItem value="To-Do">To-Do</SelectItem>
+                                            <SelectItem value="In-Progress">In-Progress</SelectItem>
+                                            <SelectItem value="In-Review">In-Review</SelectItem>
+                                            <SelectItem value="Blocked">Blocked</SelectItem>
+                                            <SelectItem value="Completed">Completed</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </form.Field>
+                    </div>
+
+                    {/* Dependencies Multi-Select Field */}
+                    <form.Field name="dependency_task_ids">
                         {(field) => (
                             <div className="space-y-2">
-                                <Label htmlFor="priority">Priority *</Label>
-                                <Select value={field.state.value} onValueChange={field.handleChange}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Priority"></SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent className="z-[100] bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
-                                        <SelectItem value="Low">Low</SelectItem>
-                                        <SelectItem value="Medium">Medium</SelectItem>
-                                        <SelectItem value="High">High</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label>Dependencies (Optional)</Label>
+                                <div className="border border-input rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-white">
+                                    {existingTasks.length === 0 ? (
+                                        <p className="text-sm text-gray-500">No other tasks available.</p>
+                                    ) : (
+                                        existingTasks.map((task) => (
+                                            <div key={task.id} className="flex items-center space-x-2">
+                                                <Checkbox 
+                                                    id={`dep-${task.id}`}
+                                                    checked={field.state.value.includes(task.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        const current = [...field.state.value];
+                                                        if (checked) {
+                                                            field.handleChange([...current, task.id]);
+                                                        } else {
+                                                            field.handleChange(current.filter(id => id !== task.id));
+                                                        }
+                                                    }}
+                                                />
+                                                <Label 
+                                                    htmlFor={`dep-${task.id}`} 
+                                                    className="text-sm font-normal cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                >
+                                                    {task.name}
+                                                </Label>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                    Select tasks that must be completed before this task starts.
+                                </p>
                             </div>
                         )}
                     </form.Field>
 
-                    {/* Status Field */}
-                    <form.Field name="status">
-                        {(field) => (
-                            <div className="space-y-2">
-                                <Label htmlFor="status">Status *</Label>
-                                <Select value={field.state.value} onValueChange={field.handleChange}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Status"></SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent className="z-[100] bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
-                                        <SelectItem value="To-Do">To-Do</SelectItem>
-                                        <SelectItem value="In-Progress">In-Progress</SelectItem>
-                                        <SelectItem value="In-Review">In-Review</SelectItem>
-                                        <SelectItem value="Blocked">Blocked</SelectItem>
-                                        <SelectItem value="Completed">Completed</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                {field.state.meta.errors && field.state.meta.errors.length > 0 && (
-                                    <p className="text-red-500 text-sm">{field.state.meta.errors[0]}</p>
-                                )}
-                            </div>
-                        )}
-                    </form.Field>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Estimated Time Field */}
+                        <form.Field name="estimated_completion_time" validators={{
+                            onChange: ({ value }) => {
+                                if (value < 0) return "Must be 0 or greater"
+                            }
+                        }}>
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="estimated_completion_time">Est. Hours *</Label>
+                                    <Input
+                                        id="estimated_completion_time"
+                                        type="number"
+                                        min="0"
+                                        value={field.state.value}
+                                        onBlur={field.handleBlur}
+                                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                                        placeholder="0"
+                                    />
+                                    {field.state.meta.errors && field.state.meta.errors.length > 0 && (
+                                        <p className="text-red-500 text-sm">{field.state.meta.errors[0]}</p>
+                                    )}
+                                </div>
+                            )}
+                        </form.Field>
 
-                    {/* Estimated Time Field */}
-                    <form.Field name="estimated_completion_time" validators={{
-                        onChange: ({ value }) => {
-                            if (value < 0) return "Must be 0 or greater"
-                        }
-                    }}>
-                        {(field) => (
-                            <div className="space-y-2">
-                                <Label htmlFor="estimated_completion_time">Estimated Hours *</Label>
-                                <Input
-                                    id="estimated_completion_time"
-                                    type="number"
-                                    min="0"
-                                    value={field.state.value}
-                                    onBlur={field.handleBlur}
-                                    onChange={(e) => field.handleChange(Number(e.target.value))}
-                                    placeholder="0"
-                                />
-                                {field.state.meta.errors && field.state.meta.errors.length > 0 && (
-                                    <p className="text-red-500 text-sm">{field.state.meta.errors[0]}</p>
-                                )}
-                            </div>
-                        )}
-                    </form.Field>
+                        {/* Due Date Field */}
+                        <form.Field name="due_date">
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="due_date">Due Date *</Label>
+                                    <Input
+                                        id="due_date"
+                                        type="date"
+                                        value={field.state.value}
+                                        onBlur={field.handleBlur}
+                                        onChange={(e) => field.handleChange(e.target.value)}
+                                    />
+                                </div>
+                            )}
+                        </form.Field>
+                    </div>
 
-                    {/* Budget Field */}
-                    <form.Field name="budget" validators={{
-                        onChange: ({ value }) => {
-                            if (value < 0) return "Must be 0 or greater"
-                        }
-                    }}>
-                        {(field) => (
-                            <div className="space-y-2">
-                                <Label htmlFor="budget">Budget *</Label>
-                                <Input
-                                    id="budget"
-                                    type="number"
-                                    step="0.01" // Allows decimals
-                                    min="0"
-                                    value={field.state.value}
-                                    onBlur={field.handleBlur}
-                                    onChange={(e) => field.handleChange(Number(e.target.value))}
-                                    placeholder="0.00"
-                                />
-                                {field.state.meta.errors && field.state.meta.errors.length > 0 && (
-                                    <p className="text-red-500 text-sm">{field.state.meta.errors[0]}</p>
-                                )}
-                            </div>
-                        )}
-                    </form.Field>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Budget Field */}
+                        <form.Field name="budget" validators={{
+                            onChange: ({ value }) => {
+                                if (value < 0) return "Must be 0 or greater"
+                            }
+                        }}>
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="budget">Budget *</Label>
+                                    <Input
+                                        id="budget"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={field.state.value}
+                                        onBlur={field.handleBlur}
+                                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            )}
+                        </form.Field>
 
-                    {/* Expense Field */}
-                    <form.Field name="expense" validators={{
-                        onChange: ({ value }) => {
-                            if (value < 0) return "Must be 0 or greater"
-                        }
-                    }}>
-                        {(field) => (
-                            <div className="space-y-2">
-                                <Label htmlFor="expense">Expense *</Label>
-                                <Input
-                                    id="expense"
-                                    type="number"
-                                    step="0.01" // Allows decimals
-                                    min="0"
-                                    value={field.state.value}
-                                    onBlur={field.handleBlur}
-                                    onChange={(e) => field.handleChange(Number(e.target.value))}
-                                    placeholder="0.00"
-                                />
-                                {field.state.meta.errors && field.state.meta.errors.length > 0 && (
-                                    <p className="text-red-500 text-sm">{field.state.meta.errors[0]}</p>
-                                )}
-                            </div>
-                        )}
-                    </form.Field>
+                        {/* Expense Field */}
+                        <form.Field name="expense" validators={{
+                            onChange: ({ value }) => {
+                                if (value < 0) return "Must be 0 or greater"
+                            }
+                        }}>
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="expense">Expense *</Label>
+                                    <Input
+                                        id="expense"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={field.state.value}
+                                        onBlur={field.handleBlur}
+                                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            )}
+                        </form.Field>
+                    </div>
 
-                    {/* Due Date Field */}
-                    <form.Field name="due_date">
-                        {(field) => (
-                            <div className="space-y-2">
-                                <Label htmlFor="due_date">Due Date *</Label>
-                                <Input
-                                    id="due_date"
-                                    type="date"
-                                    value={field.state.value}
-                                    onBlur={field.handleBlur}
-                                    onChange={(e) => field.handleChange(e.target.value)}
-                                    placeholder="0.00"
-                                />
-                                {field.state.meta.errors && field.state.meta.errors.length > 0 && (
-                                    <p className="text-red-500 text-sm">{field.state.meta.errors[0]}</p>
-                                )}
-                            </div>
-                        )}
-                    </form.Field>
-
-                    <Button type="submit" disabled={isLoading} className="w-full bg-slate-600 hover:bg-slate-700 text-white">
+                    <Button type="submit" disabled={isLoading} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-4">
                         {isLoading ? "Creating ..." : "Create Task"}
                     </Button>
                 </form>
