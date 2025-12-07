@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useForm } from "@tanstack/react-form"
 import { useAuth } from "@/contexts/AuthContext";
 import { Textarea } from "./ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Assuming you have these components available
 
 interface CreateTaskModalProps {
     projectId: string,
@@ -22,33 +23,56 @@ interface SimpleTask {
     name: string;
 }
 
+// Interface for fetching project members
+interface ProjectMember {
+    user: {
+        id: string;
+        username: string;
+        first_name: string;
+        last_name: string;
+        profile_photo_url: string;
+    }
+    role: string;
+}
+
 export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStatus = "To-Do" }: CreateTaskModalProps) {
     const { session, user } = useAuth()
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
     
-    // State to hold existing tasks for the dependency list
+    // State to hold existing tasks and members
     const [existingTasks, setExistingTasks] = useState<SimpleTask[]>([])
+    const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([])
 
-    // Fetch existing tasks when modal opens
+    // Fetch data when modal opens
     useEffect(() => {
         if (isOpen && projectId && session?.access_token) {
-            const fetchTasks = async () => {
+            const fetchData = async () => {
                 try {
-                    const response = await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
+                    // 1. Fetch Tasks (for dependencies)
+                    const tasksRes = await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
                         method: "GET",
                         headers: { "Authorization": `Bearer ${session.access_token}` }
                     });
-                    if (response.ok) {
-                        const data = await response.json();
-                        setExistingTasks(data);
+                    if (tasksRes.ok) {
+                        setExistingTasks(await tasksRes.json());
                     }
+
+                    // 2. Fetch Members (for assignees)
+                    const membersRes = await fetch(`http://localhost:8000/projects/${projectId}/members`, {
+                        method: "GET",
+                        headers: { "Authorization": `Bearer ${session.access_token}` }
+                    });
+                    if (membersRes.ok) {
+                        setProjectMembers(await membersRes.json());
+                    }
+
                 } catch (err) {
-                    console.error("Failed to load existing tasks for dependencies", err);
+                    console.error("Failed to load project data", err);
                 }
             };
-            fetchTasks();
+            fetchData();
         }
     }, [isOpen, projectId, session]);
 
@@ -62,7 +86,8 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
             budget: 0,
             expense: 0,
             due_date: "",
-            dependency_task_ids: [] as string[] 
+            dependency_task_ids: [] as string[],
+            assignee_ids: [] as string[] 
         },
         onSubmit: async ({ value }) => {
             setError("")
@@ -103,22 +128,32 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
 
                 const createdTask = data
 
-                // Assign the Task to the User
-                if (user?.id) {
+                // Assign Users to Task 
+                if (value.assignee_ids.length > 0) {
                     try {
-                        await fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user.id}`, {
-                            method: 'POST',
-                            headers: { "Authorization": `Bearer ${session?.access_token}` }
-                        })
+                        await Promise.all(
+                            value.assignee_ids.map(userId => 
+                                fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${userId}`, {
+                                    method: 'POST',
+                                    headers: { "Authorization": `Bearer ${session?.access_token}` }
+                                })
+                            )
+                        );
                     } catch (err) {
-                        console.error("Error assigning task:", err)
+                        console.error("Error assigning users:", err)
                     }
+                } else if (user?.id) {
+                    // If no one selected, assign task creator to be responsible for the task
+                    await fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user.id}`, {
+                        method: 'POST',
+                        headers: { "Authorization": `Bearer ${session?.access_token}` }
+                    }) 
+                    
                 }
 
                 // Add Multiple Dependencies
                 if (value.dependency_task_ids.length > 0) {
                     try {
-                        // Execute all dependency additions in parallel
                         await Promise.all(
                             value.dependency_task_ids.map(depId => 
                                 fetch(`http://localhost:8000/tasks/${createdTask.id}/dependencies`, {
@@ -258,6 +293,52 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                             )}
                         </form.Field>
                     </div>
+
+                    {/* --- Task Assignees Field --- */}
+                    <form.Field name="assignee_ids">
+                        {(field) => (
+                            <div className="space-y-2">
+                                <Label>Assignees</Label>
+                                <div className="border border-input rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-white">
+                                    {projectMembers.length === 0 ? (
+                                        <p className="text-sm text-gray-500">No project members found.</p>
+                                    ) : (
+                                        projectMembers.map((member) => (
+                                            <div key={member.user.id} className="flex items-center space-x-2">
+                                                <Checkbox 
+                                                    id={`assignee-${member.user.id}`}
+                                                    checked={field.state.value.includes(member.user.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        const current = [...field.state.value];
+                                                        if (checked) {
+                                                            field.handleChange([...current, member.user.id]);
+                                                        } else {
+                                                            field.handleChange(current.filter(id => id !== member.user.id));
+                                                        }
+                                                    }}
+                                                />
+                                                <Label 
+                                                    htmlFor={`assignee-${member.user.id}`} 
+                                                    className="flex items-center gap-2 text-sm font-normal cursor-pointer w-full"
+                                                >
+                                                    <Avatar className="h-6 w-6">
+                                                        <AvatarImage src={member.user.profile_photo_url} />
+                                                        <AvatarFallback className="text-[10px]">
+                                                            {member.user.first_name?.[0]}{member.user.last_name?.[0]}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="truncate">
+                                                        {member.user.first_name} {member.user.last_name} 
+                                                        <span className="text-gray-400 ml-1">(@{member.user.username})</span>
+                                                    </span>
+                                                </Label>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </form.Field>
 
                     {/* Dependencies Multi-Select Field */}
                     <form.Field name="dependency_task_ids">

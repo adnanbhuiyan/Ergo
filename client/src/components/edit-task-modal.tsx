@@ -19,7 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, X, UserPlus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TaskDependency {
     id: string;
@@ -77,18 +77,24 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateError, setUpdateError] = useState("");
 
+    // State for differing changes in task assignees on submit
     const [currentAssignees, setCurrentAssignees] = useState<User[]>([]);
-    const [userQuery, setUserQuery] = useState("");
-    const [userSearchResults, setUserSearchResults] = useState<User[]>([]);
-    const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+    
+    // State for the UI selection
     const [formAssignees, setFormAssignees] = useState<User[]>([]);
+    
+    // All available project members
+    const [projectMembers, setProjectMembers] = useState<User[]>([]);
 
-    // Fetch current assignees when modal opens
+    // Fetch data when modal opens
     useEffect(() => {
         if (isOpen && task.id) {
             fetchAssignees();
+            if (task.project_id) {
+                fetchProjectMembers();
+            }
         }
-    }, [isOpen, task.id]);
+    }, [isOpen, task.id, task.project_id]);
 
     const fetchAssignees = async () => {
         try {
@@ -109,47 +115,22 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
         }
     };
 
-    // Search users UseEffect
-    useEffect(() => {
-        const searchUsers = async () => {
-            if (!userQuery || userQuery.length < 2) {
-                setUserSearchResults([]);
-                return;
-            }
-            setIsSearchingUsers(true);
-            try {
-                const response = await fetch(
-                    `http://localhost:8000/users?user_query=${encodeURIComponent(userQuery)}`,
-                    {
-                        headers: { Authorization: `Bearer ${session?.access_token}` },
-                    }
-                );
-                if (response.ok) {
-                    const data = await response.json();
-                    const filtered = data.filter(
-                        (u: User) => !formAssignees.some((a) => a.id === u.id)
-                    );
-                    setUserSearchResults(filtered);
+    const fetchProjectMembers = async () => {
+        try {
+            const response = await fetch(
+                `http://localhost:8000/projects/${task.project_id}/members`,
+                {
+                    headers: { Authorization: `Bearer ${session?.access_token}` },
                 }
-            } catch (error) {
-                console.error("Failed to search users", error);
-            } finally {
-                setIsSearchingUsers(false);
+            );
+            if (response.ok) {
+                const data = await response.json();
+                const members = data.map((item: any) => item.user);
+                setProjectMembers(members);
             }
-        };
-
-        const timeoutId = setTimeout(searchUsers, 300);
-        return () => clearTimeout(timeoutId);
-    }, [userQuery, session?.access_token, formAssignees]);
-
-    const handleAddAssignee = (user: User) => {
-        setFormAssignees([...formAssignees, user]);
-        setUserQuery("");
-        setUserSearchResults([]);
-    };
-
-    const handleRemoveAssignee = (userId: string) => {
-        setFormAssignees(formAssignees.filter((a) => a.id !== userId));
+        } catch (err) {
+            console.error("Error fetching project members:", err);
+        }
     };
 
     const getInitials = (user: User) => {
@@ -192,10 +173,6 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                 formData.append("expense", String(value.expense));
                 formData.append("due_date", value.due_date);
 
-                for (let pair of formData.entries()) {
-                    console.log(pair[0], '=', pair[1]);
-                }
-
                 const response = await fetch(
                     `http://localhost:8000/tasks/${task.id}`,
                     {
@@ -210,7 +187,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                     throw new Error(data.detail || "Failed to update task");
                 }
 
-                // Update assignees
+                // Calculate differences in list of assignees
                 const assigneesToAdd = formAssignees.filter(
                     (fa) => !currentAssignees.some((ca) => ca.id === fa.id)
                 );
@@ -301,7 +278,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                         )}
                     </editForm.Field>
 
-                    {/* Priority and Status - Side by side */}
+                    {/* Priority and Status */}
                     <div className="grid grid-cols-2 gap-4">
                         <editForm.Field name="priority">
                             {(field) => (
@@ -316,7 +293,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                                         </SelectTrigger>
                                         <SelectContent
                                             position="popper"
-                                            className="z-[100] bg-white border border-gray-200 shadow-lg"
+                                            className="z-100 bg-white border border-gray-200 shadow-lg"
                                         >
                                             <SelectItem value="Low">Low</SelectItem>
                                             <SelectItem value="Medium">Medium</SelectItem>
@@ -340,7 +317,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                                         </SelectTrigger>
                                         <SelectContent
                                             position="popper"
-                                            className="z-[100] bg-white border border-gray-200 shadow-lg"
+                                            className="z-100 bg-white border border-gray-200 shadow-lg"
                                         >
                                             <SelectItem value="To-Do">To-Do</SelectItem>
                                             <SelectItem value="In-Progress">In-Progress</SelectItem>
@@ -354,7 +331,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                         </editForm.Field>
                     </div>
 
-                    {/* Budget, Expense, Hours - 3 columns */}
+                    {/* Budget, Expense, Hours */}
                     <div className="grid grid-cols-3 gap-4">
                         <editForm.Field name="budget">
                             {(field) => (
@@ -423,92 +400,47 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                     {/* Assignees Section */}
                     <div className="pt-4 border-t border-gray-200">
                         <Label>Task Assignees</Label>
-
-                        {/* Search */}
-                        <div className="relative mt-2">
-                            <div className="relative">
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                                <Input
-                                    placeholder="Search users to assign..."
-                                    className="pl-8"
-                                    value={userQuery}
-                                    onChange={(e) => setUserQuery(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Search Results */}
-                            {userQuery.length >= 2 && (
-                                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                                    {isSearchingUsers ? (
-                                        <div className="p-4 text-center text-sm text-gray-500">
-                                            Searching...
-                                        </div>
-                                    ) : userSearchResults.length > 0 ? (
-                                        userSearchResults.map((user) => (
-                                            <div
-                                                key={user.id}
-                                                className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3"
-                                                onClick={() => handleAddAssignee(user)}
+                        
+                        <div className="mt-2 border border-input rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-white">
+                            {projectMembers.length === 0 ? (
+                                <p className="text-sm text-gray-500">No project members found.</p>
+                            ) : (
+                                projectMembers.map((member) => {
+                                    const isSelected = formAssignees.some(u => u.id === member.id);
+                                    
+                                    return (
+                                        <div key={member.id} className="flex items-center space-x-2">
+                                            <Checkbox 
+                                                id={`assignee-${member.id}`}
+                                                checked={isSelected}
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) {
+                                                        setFormAssignees([...formAssignees, member]);
+                                                    } else {
+                                                        setFormAssignees(formAssignees.filter(u => u.id !== member.id));
+                                                    }
+                                                }}
+                                            />
+                                            <Label 
+                                                htmlFor={`assignee-${member.id}`} 
+                                                className="flex items-center gap-2 text-sm font-normal cursor-pointer w-full"
                                             >
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={user.profile_photo_url} />
-                                                    <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                                                <Avatar className="h-6 w-6">
+                                                    <AvatarImage src={member.profile_photo_url} />
+                                                    <AvatarFallback className="text-[10px]">
+                                                        {getInitials(member)}
+                                                    </AvatarFallback>
                                                 </Avatar>
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium">
-                                                        {getDisplayName(user)}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">{user.email}</p>
-                                                </div>
-                                                <UserPlus className="h-4 w-4 text-gray-400" />
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="p-4 text-center text-sm text-gray-500">
-                                            No users found
+                                                <span className="truncate">
+                                                    {getDisplayName(member)}
+                                                    <span className="text-gray-400 ml-1">(@{member.username})</span>
+                                                </span>
+                                            </Label>
                                         </div>
-                                    )}
-                                </div>
+                                    )
+                                })
                             )}
                         </div>
-
-                        {/* Current Assignees */}
-                        {formAssignees.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                                <Label className="text-sm text-gray-600">
-                                    Assigned ({formAssignees.length})
-                                </Label>
-                                <div className="space-y-2">
-                                    {formAssignees.map((assignee) => (
-                                        <div
-                                            key={assignee.id}
-                                            className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarImage src={assignee.profile_photo_url} />
-                                                    <AvatarFallback>{getInitials(assignee)}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="text-sm font-medium">
-                                                        {getDisplayName(assignee)}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">{assignee.position}</p>
-                                                </div>
-                                            </div>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleRemoveAssignee(assignee.id)}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* Submit Button */}
