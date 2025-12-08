@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "@tanstack/react-form";
+import { getApiUrl } from "@/lib/api";
 import {
     Dialog,
     DialogContent,
@@ -99,7 +100,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
     const fetchAssignees = async () => {
         try {
             const response = await fetch(
-                `http://localhost:8000/tasks/${task.id}/assignees`,
+                `${getApiUrl()}/tasks/${task.id}/assignees`,
                 {
                     headers: { Authorization: `Bearer ${session?.access_token}` },
                 }
@@ -118,7 +119,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
     const fetchProjectMembers = async () => {
         try {
             const response = await fetch(
-                `http://localhost:8000/projects/${task.project_id}/members`,
+                `${getApiUrl()}/projects/${task.project_id}/members`,
                 {
                     headers: { Authorization: `Bearer ${session?.access_token}` },
                 }
@@ -174,7 +175,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                 formData.append("due_date", value.due_date);
 
                 const response = await fetch(
-                    `http://localhost:8000/tasks/${task.id}`,
+                    `${getApiUrl()}/tasks/${task.id}`,
                     {
                         method: "PATCH",
                         headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -198,7 +199,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                 await Promise.all([
                     ...assigneesToAdd.map((user) =>
                         fetch(
-                            `http://localhost:8000/tasks/${task.id}/assignees?assignee_id=${user.id}`,
+                            `${getApiUrl()}/tasks/${task.id}/assignees?assignee_id=${user.id}`,
                             {
                                 method: "POST",
                                 headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -207,7 +208,7 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                     ),
                     ...assigneesToRemove.map((user) =>
                         fetch(
-                            `http://localhost:8000/tasks/${task.id}/assignees/${user.id}`,
+                            `${getApiUrl()}/tasks/${task.id}/assignees/${user.id}`,
                             {
                                 method: "DELETE",
                                 headers: { Authorization: `Bearer ${session?.access_token}` },

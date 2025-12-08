@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Outlet, useLocation } from "@tanstack/react-router";
+import { getApiUrl } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   AlertDialog, 
@@ -93,7 +94,7 @@ function RouteComponent() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/projects", {
+      const response = await fetch(`${getApiUrl()}/projects", {
         method: "GET",
         headers: { "Authorization": `Bearer ${session.access_token}` },
       });
@@ -125,7 +126,7 @@ function RouteComponent() {
     if (!session?.access_token || !projectToDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/projects/${projectToDelete}`, {
+      const response = await fetch(`${getApiUrl()}/projects/${projectToDelete}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${session.access_token}`
@@ -153,7 +154,7 @@ function RouteComponent() {
       }
       setIsSearchingUsers(true);
       try {
-        const url = `http://localhost:8000/users?user_query=${encodeURIComponent(userQuery)}`
+        const url = `${getApiUrl()}/users?user_query=${encodeURIComponent(userQuery)}`
         const response = await fetch(url, {
           method: "GET",
           headers: { "Authorization": `Bearer ${session?.access_token}` }
@@ -207,15 +208,15 @@ function RouteComponent() {
       if (value.budget !== undefined) formData.append("budget", String(value.budget))
 
       try {
-        const response = await fetch("http://localhost:8000/projects", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${session?.access_token}` },
-          body: formData
-        })
+        const response = await fetch(`${getApiUrl()}/projects", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${session?.access_token}` },
+        body: formData
+      })
 
-        const data = await response.json()
+      const data = await response.json()
 
-        if (!response.ok) {
+      if (!response.ok) {
           throw new Error(data.detail || "Failed to create project");
         }
 
@@ -224,7 +225,7 @@ function RouteComponent() {
         if (selectedUsers.length > 0) {
           await Promise.all(
             selectedUsers.map(user =>
-              fetch(`http://localhost:8000/projects/${newProjectId}/members`, {
+              fetch(`${getApiUrl()}/projects/${newProjectId}/members`, {
                 method: "POST",
                 headers: {
                   "Authorization": `Bearer ${session?.access_token}`,
@@ -302,9 +303,9 @@ function RouteComponent() {
     <DashboardLayout>
       <Outlet />
       {!isProjectDetail && (
-        <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
           <header className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Projects</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Projects</h1>
             <div className="flex items-center gap-4">
               <div className="flex gap-1 border border-gray-300 rounded-md p-1 bg-white">
                 <button type="button" onClick={() => setView('grid')} className={`px-4 py-2 rounded transition-colors flex items-center gap-2 cursor-pointer ${view === 'grid' ? 'bg-slate-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}><Grid3x3 className="w-4 h-4" />
@@ -316,7 +317,7 @@ function RouteComponent() {
                 </button>
               </div>
             </div>
-          </header>
+      </header>
 
           <Dialog open={isModalOpen} onOpenChange={(open) => {
             setIsModalOpen(open);
@@ -327,59 +328,59 @@ function RouteComponent() {
               setUserQuery("");
             }
           }}>
-            <DialogTrigger asChild>
+        <DialogTrigger asChild>
               <Button onClick={() => setIsModalOpen(true)} variant="default" size="sm" className="bg-slate-600 hover:bg-slate-700 text-white mb-6">Create Project</Button>
-            </DialogTrigger>
+        </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] bg-white z-50 max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
-              </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+          </DialogHeader>
 
-              {error && (
+          {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>
-              )}
+          )}
 
-              <form onSubmit={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                form.handleSubmit()
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            form.handleSubmit()
               }} className="space-y-4">
 
-                <form.Field name="name" validators={{
+            <form.Field name="name" validators={{
                   onChange: ({ value }) => value.length < 3 ? "Name must be at least 3 characters." : undefined,
-                }}>
-                  {(field) => (
+            }}>
+              {(field) => (
                     <div>
-                      <Label htmlFor="name">Project Name</Label>
-                      <Input id="name" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
+                  <Label htmlFor="name">Project Name</Label>
+                  <Input id="name" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
                       {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
-                    </div>
-                  )}
-                </form.Field>
+                </div>
+              )}
+            </form.Field>
 
-                <form.Field name="description" validators={{
+            <form.Field name="description" validators={{
                   onChange: ({ value }) => value.length > 500 ? "Max 500 Characters" : undefined,
-                }}>
-                  {(field) => (
+            }}>
+              {(field) => (
                     <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Input id="description" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
+                  <Label htmlFor="description">Description</Label>
+                  <Input id="description" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} className="mt-1" />
                       {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
-                    </div>
-                  )}
-                </form.Field>
+                </div>
+              )}
+            </form.Field>
 
-                <form.Field name="budget" validators={{
+            <form.Field name="budget" validators={{
                   onChange: ({ value }) => value < 0 ? "Budget must be at least 0" : undefined,
-                }}>
-                  {(field) => (
+            }}>
+              {(field) => (
                     <div>
-                      <Label htmlFor="budget">Budget</Label>
-                      <Input type="number" id="budget" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(Number(e.target.value))} className="mt-1" />
+                  <Label htmlFor="budget">Budget</Label>
+                  <Input type="number" id="budget" value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(Number(e.target.value))} className="mt-1" />
                       {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
-                    </div>
-                  )}
-                </form.Field>
+                </div>
+              )}
+            </form.Field>
 
                 <div className="pt-4 border-t border-gray-100">
                   <Label>Invite Team Members</Label>
@@ -454,10 +455,10 @@ function RouteComponent() {
                       <span>Creating & Inviting Users...</span>
                     </div>
                   ) : "Create Project"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
           
           <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>

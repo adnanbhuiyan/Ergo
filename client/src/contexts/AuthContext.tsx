@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import { getApiUrl } from "../lib/api";
 
 interface UserProfile {
   id: string;
@@ -93,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     if (session) {
       try {
-        await fetch("http://localhost:8000/auth/logout", {
+        await fetch(`${getApiUrl()}/auth/logout`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${session.access_token}`,

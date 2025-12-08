@@ -9,6 +9,7 @@ import { useForm } from "@tanstack/react-form"
 import { useAuth } from "@/contexts/AuthContext";
 import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Assuming you have these components available
+import { getApiUrl } from "@/lib/api";
 
 interface CreateTaskModalProps {
     projectId: string,
@@ -51,7 +52,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
             const fetchData = async () => {
                 try {
                     // 1. Fetch Tasks (for dependencies)
-                    const tasksRes = await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
+                    const tasksRes = await fetch(`${getApiUrl()}/projects/${projectId}/tasks`, {
                         method: "GET",
                         headers: { "Authorization": `Bearer ${session.access_token}` }
                     });
@@ -60,7 +61,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     }
 
                     // 2. Fetch Members (for assignees)
-                    const membersRes = await fetch(`http://localhost:8000/projects/${projectId}/members`, {
+                    const membersRes = await fetch(`${getApiUrl()}/projects/${projectId}/members`, {
                         method: "GET",
                         headers: { "Authorization": `Bearer ${session.access_token}` }
                     });
@@ -105,7 +106,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
 
             try {
                 // Create the Task
-                const response = await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
+                const response = await fetch(`${getApiUrl()}/projects/${projectId}/tasks`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${session?.access_token}` },
                     body: formData
@@ -133,7 +134,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     try {
                         await Promise.all(
                             value.assignee_ids.map(userId => 
-                                fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${userId}`, {
+                                fetch(`${getApiUrl()}/tasks/${createdTask.id}/assignees?assignee_id=${userId}`, {
                                     method: 'POST',
                                     headers: { "Authorization": `Bearer ${session?.access_token}` }
                                 })
@@ -144,7 +145,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     }
                 } else if (user?.id) {
                     // If no one selected, assign task creator to be responsible for the task
-                    await fetch(`http://localhost:8000/tasks/${createdTask.id}/assignees?assignee_id=${user.id}`, {
+                    await fetch(`${getApiUrl()}/tasks/${createdTask.id}/assignees?assignee_id=${user.id}`, {
                         method: 'POST',
                         headers: { "Authorization": `Bearer ${session?.access_token}` }
                     }) 
@@ -156,7 +157,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     try {
                         await Promise.all(
                             value.dependency_task_ids.map(depId => 
-                                fetch(`http://localhost:8000/tasks/${createdTask.id}/dependencies`, {
+                                fetch(`${getApiUrl()}/tasks/${createdTask.id}/dependencies`, {
                                     method: 'POST',
                                     headers: { 
                                         "Authorization": `Bearer ${session?.access_token}`,

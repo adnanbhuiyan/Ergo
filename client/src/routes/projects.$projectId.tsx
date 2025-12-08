@@ -1,6 +1,7 @@
 import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState, useMemo } from "react"
 import { useAuth } from "@/contexts/AuthContext"
+import { getApiUrl } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -98,7 +99,7 @@ function ProjectDetail() {
     const [error, setError] = useState("")
     const [tasks, setTasks] = useState<Task[]>([])
     const [tasksLoading, setTasksLoading] = useState(false)
-
+    
     // --- Edit/Delete State ---
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isEditTaskOpen, setIsEditTaskOpen] = useState(false)
@@ -121,7 +122,7 @@ function ProjectDetail() {
 
     const fetchProject = async () => {
         try {
-            const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
+            const response = await fetch(`${getApiUrl()}/projects/${projectId}`, {
                 method: "GET",
                 headers: { "Authorization": `Bearer ${session?.access_token}` }
             })
@@ -142,7 +143,7 @@ function ProjectDetail() {
 
     const fetchMembers = async () => {
         try {
-            const response = await fetch(`http://localhost:8000/projects/${projectId}/members`, {
+            const response = await fetch(`${getApiUrl()}/projects/${projectId}/members`, {
                 method: "GET",
                 headers: { "Authorization": `Bearer ${session?.access_token}` }
             })
@@ -159,7 +160,7 @@ function ProjectDetail() {
     const fetchTasks = async () => {
         setTasksLoading(true)
         try {
-            const response = await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
+            const response = await fetch(`${getApiUrl()}/projects/${projectId}/tasks`, {
                 method: "GET",
                 headers: { "Authorization": `Bearer ${session?.access_token}` }
             })
@@ -214,7 +215,7 @@ function ProjectDetail() {
             //Remove task assignees
             if (taskToDelete.assignees && taskToDelete.assignees.length > 0) {
                 await Promise.all(taskToDelete.assignees.map(assignee => 
-                    fetch(`http://localhost:8000/tasks/${taskToDelete.id}/assignees/${assignee.user.id}`, {
+                    fetch(`${getApiUrl()}/tasks/${taskToDelete.id}/assignees/${assignee.user.id}`, {
                         method: "DELETE",
                         headers
                     })
@@ -225,7 +226,7 @@ function ProjectDetail() {
             if (taskToDelete.depends_on && taskToDelete.depends_on.length > 0) {
                 await Promise.all(taskToDelete.depends_on.map(dep => {
                     const depId = typeof dep === 'string' ? dep : dep.id;
-                    return fetch(`http://localhost:8000/tasks/${taskToDelete.id}/dependencies/${depId}`, {
+                    return fetch(`${getApiUrl()}/tasks/${taskToDelete.id}/dependencies/${depId}`, {
                         method: "DELETE",
                         headers
                     })
@@ -236,7 +237,7 @@ function ProjectDetail() {
             if (taskToDelete.blocking && taskToDelete.blocking.length > 0) {
                 await Promise.all(taskToDelete.blocking.map(blockedTask => {
                     const blockedTaskId = typeof blockedTask === 'string' ? blockedTask : blockedTask.id;
-                    return fetch(`http://localhost:8000/tasks/${blockedTaskId}/dependencies/${taskToDelete.id}`, {
+                    return fetch(`${getApiUrl()}/tasks/${blockedTaskId}/dependencies/${taskToDelete.id}`, {
                         method: "DELETE",
                         headers
                     })
@@ -244,7 +245,7 @@ function ProjectDetail() {
             }
 
             // Delete the Task after all dependencies and assignees have been removed
-            const response = await fetch(`http://localhost:8000/tasks/${taskToDelete.id}`, {
+            const response = await fetch(`${getApiUrl()}/tasks/${taskToDelete.id}`, {
                 method: "DELETE",
                 headers
             });
@@ -306,7 +307,7 @@ function ProjectDetail() {
                                 </div>
                             </div>
 
-
+                           
                             <div className="flex items-center gap-6 md:ml-auto">
                                 {members.length > 0 && (
                                     <div className="flex flex-col items-end">
@@ -322,7 +323,7 @@ function ProjectDetail() {
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     </HoverCardTrigger>
-
+                                                    
                                                     <HoverCardContent className="w-80 bg-slate-900 border-slate-800 text-slate-100 shadow-xl">
                                                         <div className="flex justify-between space-x-4">
                                                             <Avatar className="h-12 w-12 ring-2 ring-slate-700">
@@ -340,7 +341,7 @@ function ProjectDetail() {
                                                                     {member.user.username && <span className="text-xs text-slate-400">@{member.user.username}</span>}
                                                                 </div>
                                                                 <div className="flex items-center pt-2">
-                                                                    <Mail className="mr-2 h-3 w-3 text-slate-500" />
+                                                                    <Mail className="mr-2 h-3 w-3 text-slate-500" /> 
                                                                     <span className="text-xs text-slate-400">{member.user.email}</span>
                                                                 </div>
                                                                 {member.user.position && (
@@ -395,7 +396,7 @@ function ProjectDetail() {
                                     </p>
                                 </div>
 
-
+                            
                                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="icon" className="ml-2">
@@ -407,12 +408,12 @@ function ProjectDetail() {
                                             <DialogTitle>Project Settings {isOwner ? "" : "(Viewer Permissions Only)"}</DialogTitle>
                                         </DialogHeader>
                                         {isEditModalOpen && (
-                                            <EditProjectForm
-                                                project={project}
-                                                currentMembers={members}
-                                                projectId={projectId}
+                                            <EditProjectForm 
+                                                project={project} 
+                                                currentMembers={members} 
+                                                projectId={projectId} 
                                                 isOwner={isOwner}
-                                                onSuccess={handleProjectUpdate}
+                                                onSuccess={handleProjectUpdate} 
                                             />
                                         )}
                                     </DialogContent>
@@ -626,12 +627,12 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
     const { session } = useAuth();
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateError, setUpdateError] = useState("");
-
+    
     // Member search state
     const [userQuery, setUserQuery] = useState("");
     const [userSearchResults, setUserSearchResults] = useState<User[]>([]);
     const [isSearchingUsers, setIsSearchingUsers] = useState(false);
-
+    
     // Form state for members (initialized from props)
     const [formMembers, setFormMembers] = useState<SelectedUser[]>(
         currentMembers.map(m => ({ ...m.user, role: m.role }))
@@ -649,13 +650,13 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
 
             setUpdateError("")
             setIsUpdating(true)
-
+            
             try {
                 const formData = new FormData()
                 formData.append("name", value.name)
                 formData.append("description", value.description)
                 formData.append("budget", String(value.budget))
-
+                
                 // Logic for Toggling Between Active and Completed
                 if (value.is_completed) {
                     if (!project.completed_at) {
@@ -664,9 +665,9 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 } else {
                     formData.append("completed_at", "")
                 }
-
+                
                 // PUT Request to Update Project Details
-                const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
+                const response = await fetch(`${getApiUrl()}/projects/${projectId}`, {
                     method: "PUT",
                     headers: { "Authorization": `Bearer ${session?.access_token}` },
                     body: formData
@@ -682,8 +683,8 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 const usersToRemove = currentMembers.filter(m => !formMembers.some(fm => fm.id === m.user.id));
 
                 await Promise.all([
-                    ...usersToAdd.map(u =>
-                        fetch(`http://localhost:8000/projects/${projectId}/members`, {
+                    ...usersToAdd.map(u => 
+                        fetch(`${getApiUrl()}/projects/${projectId}/members`, {
                             method: "POST",
                             headers: {
                                 "Authorization": `Bearer ${session?.access_token}`,
@@ -692,8 +693,8 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                             body: JSON.stringify({ user_id: u.id, role: u.role })
                         })
                     ),
-                    ...usersToRemove.map(m =>
-                        fetch(`http://localhost:8000/projects/${projectId}/members/${m.user.id}`, {
+                    ...usersToRemove.map(m => 
+                        fetch(`${getApiUrl()}/projects/${projectId}/members/${m.user.id}`, {
                             method: "DELETE",
                             headers: { "Authorization": `Bearer ${session?.access_token}` }
                         })
@@ -721,7 +722,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             }
             setIsSearchingUsers(true);
             try {
-                const url = `http://localhost:8000/users?user_query=${encodeURIComponent(userQuery)}`
+                const url = `${getApiUrl()}/users?user_query=${encodeURIComponent(userQuery)}`
                 const response = await fetch(url, {
                     method: "GET",
                     headers: { "Authorization": `Bearer ${session?.access_token}` }
@@ -767,7 +768,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             e.stopPropagation()
             if (isOwner) editForm.handleSubmit()
         }} className="space-y-4">
-
+            
             {updateError && (
                 <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4 text-sm">{updateError}</div>
             )}
@@ -837,11 +838,11 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             <editForm.Field name="is_completed">
                 {(field) => (
                     <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox
-                            id="is_completed"
+                        <Checkbox 
+                            id="is_completed" 
                             disabled={!isOwner}
-                            checked={field.state.value}
-                            onCheckedChange={(checked) => field.handleChange(checked === true)}
+                            checked={field.state.value} 
+                            onCheckedChange={(checked) => field.handleChange(checked === true)} 
                         />
                         <Label htmlFor="is_completed" className="font-normal">Mark project as completed</Label>
                     </div>
@@ -851,51 +852,51 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             {/* Manage Members */}
             <div className="pt-4 border-t border-gray-100">
                 <Label>Manage Team Members</Label>
-
+                
                 {/* Search - Hide if not owner */}
                 {isOwner && (
-                    <div className="relative mt-2">
-                        <div className="relative">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Add users by username or email..."
-                                className="pl-8"
-                                value={userQuery}
-                                onChange={(e) => setUserQuery(e.target.value)}
-                            />
-                        </div>
-                        {userQuery.length >= 2 && (
-                            <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                                {isSearchingUsers ? (
-                                    <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
-                                ) : userSearchResults.length > 0 ? (
-                                    userSearchResults.map((user) => (
-                                        <div
-                                            key={user.id}
-                                            className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
-                                            onClick={() => {
-                                                setFormMembers([...formMembers, { ...user, role: "Member" }]);
-                                                setUserQuery("");
-                                                setUserSearchResults([]);
-                                            }}
-                                        >
-                                            <Avatar className="h-8 w-8">
-                                                <AvatarImage src={user.profile_photo_url} />
-                                                <AvatarFallback>{getInitials(user)}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">{getDisplayName(user)}</p>
-                                                <p className="text-xs text-gray-500">{user.email}</p>
-                                            </div>
-                                            <UserPlus className="h-4 w-4 text-gray-400" />
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="p-4 text-center text-sm text-gray-500">No users found.</div>
-                                )}
-                            </div>
-                        )}
+                <div className="relative mt-2">
+                    <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="Add users by username or email..."
+                            className="pl-8"
+                            value={userQuery}
+                            onChange={(e) => setUserQuery(e.target.value)}
+                        />
                     </div>
+                    {userQuery.length >= 2 && (
+                        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                            {isSearchingUsers ? (
+                                <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
+                            ) : userSearchResults.length > 0 ? (
+                                userSearchResults.map((user) => (
+                                    <div
+                                        key={user.id}
+                                        className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
+                                        onClick={() => {
+                                            setFormMembers([...formMembers, { ...user, role: "Member" }]);
+                                            setUserQuery("");
+                                            setUserSearchResults([]);
+                                        }}
+                                    >
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={user.profile_photo_url} />
+                                            <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900">{getDisplayName(user)}</p>
+                                            <p className="text-xs text-gray-500">{user.email}</p>
+                                        </div>
+                                        <UserPlus className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-4 text-center text-sm text-gray-500">No users found.</div>
+                            )}
+                        </div>
+                    )}
+                </div>
                 )}
 
                 {/* Active Member List in Form */}
@@ -912,13 +913,13 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                                 <span className="text-xs text-slate-500 border-l pl-2 border-slate-300">{user.role}</span>
                                 {/* Only show remove button if user is owner and they are not removing themselves */}
                                 {isOwner && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormMembers(formMembers.filter(m => m.id !== user.id))}
-                                        className="hover:bg-slate-200 rounded-full p-0.5 transition-colors"
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormMembers(formMembers.filter(m => m.id !== user.id))}
+                                    className="hover:bg-slate-200 rounded-full p-0.5 transition-colors"
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
                                 )}
                             </div>
                         ))}
@@ -927,14 +928,14 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             </div>
 
             {isOwner && (
-                <Button type="submit" disabled={isUpdating} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-6">
-                    {isUpdating ? (
-                        <div className="flex items-center gap-2">
-                            <Spinner className="h-4 w-4" />
-                            <span>Saving Changes...</span>
-                        </div>
-                    ) : "Save Changes"}
-                </Button>
+            <Button type="submit" disabled={isUpdating} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-6">
+                {isUpdating ? (
+                    <div className="flex items-center gap-2">
+                        <Spinner className="h-4 w-4" />
+                        <span>Saving Changes...</span>
+                    </div>
+                ) : "Save Changes"}
+            </Button>
             )}
 
         </form>

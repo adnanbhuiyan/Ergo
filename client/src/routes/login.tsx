@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useNavigate, Link } from "@tanstack/react-router";
-import { useAuth } from "../contexts/AuthContext"; 
+import { useAuth } from "../contexts/AuthContext";
+import { getApiUrl } from "../lib/api"; 
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -32,7 +33,12 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/auth/login", {
+      const apiUrl = getApiUrl();
+      const loginUrl = `${apiUrl}/auth/login`;
+      
+      console.log("Attempting login to:", loginUrl);
+      
+      const response = await fetch(loginUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -43,6 +49,8 @@ function Login() {
         }),
       });
 
+      console.log("Response status:", response.status);
+      
       const data = await response.json();
 
       if (!response.ok) {
@@ -57,8 +65,10 @@ function Login() {
       //Navigate to the dashboard after the user logs in
       await navigate({ to: "/dashboard" });
     } catch (err) {
-      setError("Network error. Please try again.");
+      const errorMessage = err instanceof Error ? err.message : "Network error. Please try again.";
+      setError(`Network error: ${errorMessage}. Please check your backend URL.`);
       console.error("Login error:", err);
+      console.error("API URL being used:", getApiUrl());
     } finally {
       setIsLoading(false);
     }

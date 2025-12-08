@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "../contexts/AuthContext"; 
+import { useAuth } from "../contexts/AuthContext";
+import { getApiUrl } from "../lib/api"; 
 
 interface File {}
 
@@ -59,7 +60,7 @@ function Register() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/auth/signup", {
+      const response = await fetch(`${getApiUrl()}/auth/signup`, {
         // Making post request to the FastAPI endpoint
         method: "POST",
         body: formData,

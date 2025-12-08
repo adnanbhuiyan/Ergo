@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { Bell, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getApiUrl } from "../lib/api";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -33,7 +34,7 @@ function Dashboard() {
     const allTasks: any[] = []
 
     try {
-      const projectsResponse = await fetch("http://localhost:8000/projects", {
+      const projectsResponse = await fetch(`${getApiUrl()}/projects`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${session.access_token}` }
       })
@@ -45,7 +46,7 @@ function Dashboard() {
 
 
       for (const project of userProjects) {
-        const tasksResponse = await fetch(`http://localhost:8000/projects/${project.id}/tasks`, {
+        const tasksResponse = await fetch(`${getApiUrl()}/projects/${project.id}/tasks`, {
           method: "GET",
           headers: { 'Authorization': `Bearer ${session.access_token}` }
         })
@@ -54,7 +55,7 @@ function Dashboard() {
           const projectTasks = await tasksResponse.json()
 
           for (const task of projectTasks) {
-            const assigneesResponse = await fetch(`http://localhost:8000/tasks/${task.id}/assignees`, {
+            const assigneesResponse = await fetch(`${getApiUrl()}/tasks/${task.id}/assignees`, {
               method: "GET",
               headers: { "Authorization": `Bearer ${session.access_token}` }
             })
