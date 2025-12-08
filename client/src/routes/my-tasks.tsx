@@ -32,7 +32,7 @@ function MyTasks() {
         const allTasks: any[] = []
 
         try {
-            const projectsResponse = await fetch(`${getApiUrl()}/projects", {
+            const projectsResponse = await fetch(`${getApiUrl()}/projects`, {
                 method: "GET",
                 headers: { "Authorization": `Bearer ${session.access_token}` }
             })

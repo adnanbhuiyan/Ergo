@@ -94,7 +94,7 @@ function RouteComponent() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${getApiUrl()}/projects", {
+      const response = await fetch(`${getApiUrl()}/projects`, {
         method: "GET",
         headers: { "Authorization": `Bearer ${session.access_token}` },
       });
@@ -208,7 +208,7 @@ function RouteComponent() {
       if (value.budget !== undefined) formData.append("budget", String(value.budget))
 
       try {
-        const response = await fetch(`${getApiUrl()}/projects", {
+        const response = await fetch(`${getApiUrl()}/projects`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${session?.access_token}` },
         body: formData
