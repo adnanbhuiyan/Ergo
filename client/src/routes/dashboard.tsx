@@ -8,15 +8,6 @@ import { DashboardLayout } from "@/components/layouts/dashboard-layout";
 import { Bell, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  budget: number;
-  owner_id: string;
-  created_at: string;
-}
-
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
