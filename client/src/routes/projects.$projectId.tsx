@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ArrowLeft, Settings, Search, UserPlus, X, Mail, Briefcase } from "lucide-react"
+import { ArrowLeft, Settings, Search, UserPlus, X, Mail, Briefcase, Link, Trash2 } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { CreateTaskModal } from "@/components/create-task-modal"
 import { EditTaskModal } from "@/components/edit-task-modal"
@@ -17,6 +17,16 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useForm } from "@tanstack/react-form"
 import { Separator } from "@/components/ui/separator"
 import { GanttChart } from "@/components/gantt-chart"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // --- Interfaces ---
 
@@ -45,6 +55,11 @@ interface TaskDependency {
     status: string
 }
 
+interface TaskAssignee {
+    user: User;
+    role?: string;
+}
+
 interface Task {
     id: string;
     name: string
@@ -62,6 +77,7 @@ interface Task {
     created_by: string;
     depends_on: TaskDependency[];
     blocking: TaskDependency[];
+    assignees?: TaskAssignee[];
 }
 
 export const Route = createFileRoute("/projects/$projectId")({
@@ -80,13 +96,18 @@ function ProjectDetail() {
     const [members, setMembers] = useState<ProjectMember[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
-    const [tasks, setTasks] = useState<any[]>([])
+    const [tasks, setTasks] = useState<Task[]>([])
     const [tasksLoading, setTasksLoading] = useState(false)
 
-    // --- Edit Modal State ---
+    // --- Edit/Delete State ---
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isEditTaskOpen, setIsEditTaskOpen] = useState(false)
     const [editingTask, setEditingTask] = useState<Task | null>(null)
+    
+    // Delete Task State
+    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
+    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     const columns = ["To-Do", "In-Progress", "In-Review", "Blocked", "Completed"]
 
@@ -177,17 +198,73 @@ function ProjectDetail() {
         return user.username || user.email || "Unknown User";
     };
 
-    // Callback when edit is successful
     const handleProjectUpdate = () => {
         setIsEditModalOpen(false);
         fetchProject();
         fetchMembers();
     };
 
-    // Get all Members Except The Current Logged In User
+    const handleDeleteTask = async () => {
+        if (!taskToDelete) return;
+        setIsDeleting(true);
+
+        try {
+            const headers = { "Authorization": `Bearer ${session?.access_token}` };
+
+            //Remove task assignees
+            if (taskToDelete.assignees && taskToDelete.assignees.length > 0) {
+                await Promise.all(taskToDelete.assignees.map(assignee => 
+                    fetch(`http://localhost:8000/tasks/${taskToDelete.id}/assignees/${assignee.user.id}`, {
+                        method: "DELETE",
+                        headers
+                    })
+                ));
+            }
+
+            // Remove any depends on dependencies
+            if (taskToDelete.depends_on && taskToDelete.depends_on.length > 0) {
+                await Promise.all(taskToDelete.depends_on.map(dep => {
+                    const depId = typeof dep === 'string' ? dep : dep.id;
+                    return fetch(`http://localhost:8000/tasks/${taskToDelete.id}/dependencies/${depId}`, {
+                        method: "DELETE",
+                        headers
+                    })
+                }));
+            }
+
+            // Remove any blocking dependencies
+            if (taskToDelete.blocking && taskToDelete.blocking.length > 0) {
+                await Promise.all(taskToDelete.blocking.map(blockedTask => {
+                    const blockedTaskId = typeof blockedTask === 'string' ? blockedTask : blockedTask.id;
+                    return fetch(`http://localhost:8000/tasks/${blockedTaskId}/dependencies/${taskToDelete.id}`, {
+                        method: "DELETE",
+                        headers
+                    })
+                }));
+            }
+
+            // Delete the Task after all dependencies and assignees have been removed
+            const response = await fetch(`http://localhost:8000/tasks/${taskToDelete.id}`, {
+                method: "DELETE",
+                headers
+            });
+
+            if (response.ok) {
+                setTasks(prevTasks => prevTasks.filter(t => t.id !== taskToDelete.id));
+                setIsDeleteAlertOpen(false);
+                setTaskToDelete(null);
+            } else {
+                console.error("Failed to delete task");
+            }
+        } catch (error) {
+            console.error("Error deleting task and relations:", error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const filteredMembers = members.filter(m => m.user.id !== session?.user?.id);
 
-    // Determine if the current user is an Owner
     const isOwner = useMemo(() => {
         if (!session?.user?.id || members.length === 0) return false;
         const currentUserMember = members.find(m => m.user.id === session.user.id);
@@ -233,12 +310,8 @@ function ProjectDetail() {
                             <div className="flex items-center gap-6 md:ml-auto">
                                 {members.length > 0 && (
                                     <div className="flex flex-col items-end">
-
                                         <span className="text-xs text-gray-500 mb-1">Team Members ({members.length})</span>
-
                                         <div className="flex -space-x-2 overflow-hidden hover:space-x-1 transition-all duration-10">
-
-                                            {/* Filtered Members Avatars */}
                                             {filteredMembers.slice(0, 5).map((member, index) => (
                                                 <HoverCard key={member.user.id || index}>
                                                     <HoverCardTrigger asChild>
@@ -281,8 +354,6 @@ function ProjectDetail() {
                                                     </HoverCardContent>
                                                 </HoverCard>
                                             ))}
-
-
                                             {filteredMembers.length > 5 && (
                                                 <HoverCard>
                                                     <HoverCardTrigger asChild>
@@ -290,7 +361,6 @@ function ProjectDetail() {
                                                             +{filteredMembers.length - 5}
                                                         </div>
                                                     </HoverCardTrigger>
-
                                                     <HoverCardContent className="w-60 bg-slate-900 border-slate-800 text-slate-100 shadow-xl">
                                                         <div className="space-y-2">
                                                             <h4 className="text-sm font-medium text-slate-100">Other Members</h4>
@@ -336,8 +406,6 @@ function ProjectDetail() {
                                         <DialogHeader>
                                             <DialogTitle>Project Settings {isOwner ? "" : "(Viewer Permissions Only)"}</DialogTitle>
                                         </DialogHeader>
-
-                                        {/* Render the Form Component only when modal is open */}
                                         {isEditModalOpen && (
                                             <EditProjectForm
                                                 project={project}
@@ -386,14 +454,30 @@ function ProjectDetail() {
                                             {tasks.filter(t => t.status === columnStatus).map((task) => (
                                                 <div
                                                     key={task.id}
-                                                    className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                                    className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative group"
                                                     onClick={(e) => {
                                                         e.stopPropagation()
                                                         setEditingTask(task);
                                                         setIsEditTaskOpen(true);
                                                     }}
                                                 >
-                                                    <h4 className="font-medium text-gray-900 mb-2">{task.name}</h4>
+                                                    {/* Delete Button (Visible on Hover) */}
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setTaskToDelete(task);
+                                                                setIsDeleteAlertOpen(true);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+
+                                                    <h4 className="font-medium text-gray-900 mb-2 pr-6">{task.name}</h4>
                                                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
 
                                                     <div className="flex items-center gap-2 mb-2">
@@ -410,44 +494,59 @@ function ProjectDetail() {
                                                         </div>
                                                     </div>
 
-                                                    {/* Task Dependencies */}
-                                                    {(task.depends_on?.length > 0 || task.blocking?.length > 0) && (
-                                                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-                                                            {task.depends_on?.length > 0 && (
-                                                                <div>
-                                                                    <p className="text-xs font-medium text-gray-500 mb-1">Depends on:</p>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {task.depends_on.map((dep: TaskDependency) => (
-                                                                            <span
-                                                                                key={dep.id}
-                                                                                className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200"
-                                                                                title={`Status: ${dep.status}`}
+                                                    {/* Footer: Dependencies and Assignees */}
+                                                    <div className="flex items-end justify-between mt-3 pt-2 border-t border-gray-100 min-h-6">
+                                                        
+                                                        {/* Left Side: Dependencies */}
+                                                        <div className="flex-1 flex flex-wrap gap-1">
+                                                            {task.depends_on && task.depends_on.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {task.depends_on.map((dep: any) => {
+                                                                        const depId = typeof dep === 'string' ? dep : dep.id || dep.depends_on_task_id;
+                                                                        const depTask = tasks.find(t => t.id === depId);
+                                                                        const isDepCompleted = depTask?.status === "Completed";
+                                                                        return (
+                                                                            <Badge 
+                                                                                key={depId} 
+                                                                                variant="outline" 
+                                                                                className={`text-[9px] px-1.5 py-0 h-5 border-amber-200 bg-amber-50 text-amber-700 truncate max-w-[100px] flex items-center gap-1 ${isDepCompleted ? 'line-through opacity-60' : ''}`}
+                                                                                title={depTask?.name || "Dependency"}
                                                                             >
-                                                                                {dep.name}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {task.blocking?.length > 0 && (
-                                                                <div>
-                                                                    <p className="text-xs font-medium text-gray-500 mb-1">Blocking:</p>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {task.blocking.map((dep: TaskDependency) => (
-                                                                            <span
-                                                                                key={dep.id}
-                                                                                className="text-xs px-2 py-0.5 bg-orange-50 text-orange-700 rounded border border-orange-200"
-                                                                                title={`Status: ${dep.status}`}
-                                                                            >
-                                                                                {dep.name}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
+                                                                                <Link className="w-2.5 h-2.5" />
+                                                                                {depTask ? depTask.name : "Dep"}
+                                                                            </Badge>
+                                                                        )
+                                                                    })}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    )}
+
+                                                        {/* Right Side: Assignees */}
+                                                        {task.assignees && task.assignees.length > 0 && (
+                                                            <div className="flex -space-x-2 ml-2 shrink-0">
+                                                                {task.assignees.slice(0, 3).map((assignee: TaskAssignee) => (
+                                                                    <HoverCard key={assignee.user.id}>
+                                                                        <HoverCardTrigger asChild>
+                                                                            <Avatar className="h-6 w-6 border-2 border-white ring-1 ring-gray-100 cursor-pointer">
+                                                                                <AvatarImage src={assignee.user.profile_photo_url} />
+                                                                                <AvatarFallback className="text-[9px] bg-slate-100 text-slate-600">
+                                                                                    {getInitials(assignee.user)}
+                                                                                </AvatarFallback>
+                                                                            </Avatar>
+                                                                        </HoverCardTrigger>
+                                                                        <HoverCardContent className="w-auto p-2 text-xs bg-slate-900 text-white border-none">
+                                                                            {getDisplayName(assignee.user)}
+                                                                        </HoverCardContent>
+                                                                    </HoverCard>
+                                                                ))}
+                                                                {task.assignees.length > 3 && (
+                                                                    <div className="flex items-center justify-center h-6 w-6 rounded-full border-2 border-white bg-gray-100 text-[9px] font-medium text-gray-600">
+                                                                        +{task.assignees.length - 3}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -484,6 +583,31 @@ function ProjectDetail() {
                     }}
                 />
             )}
+
+            {/* Delete Confirmation Alert */}
+            <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                <AlertDialogContent className="bg-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the task <span className="font-semibold text-gray-900">"{taskToDelete?.name}"</span> and remove it from the project. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault(); 
+                                handleDeleteTask();
+                            }}
+                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? <Spinner className="w-4 h-4 text-white" /> : "Delete Task"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }
@@ -521,7 +645,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             is_completed: !!project.completed_at
         },
         onSubmit: async ({ value }) => {
-            if (!isOwner) return; // double check
+            if (!isOwner) return; 
 
             setUpdateError("")
             setIsUpdating(true)

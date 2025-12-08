@@ -461,7 +461,7 @@ function RouteComponent() {
 
           
           <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
-            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+            <AlertDialogContent className="bg-white" onClick={(e) => e.stopPropagation()}>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>

@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 import uuid
 from datetime import datetime
 from typing import Optional, List
+from src.users.schemas import PublicUserProfile
 
 class TaskDependencyRead(BaseModel):
     """
@@ -54,6 +55,10 @@ class UpdateTask(BaseModel):
         if val == "":
             return None
         return val
+    
+
+class TaskAssignee(BaseModel):
+    user: PublicUserProfile
 
 class GetTask(TaskBase):
     """
@@ -69,6 +74,8 @@ class GetTask(TaskBase):
     
     depends_on: List[TaskDependencyRead] = []  
     blocking: List[TaskDependencyRead] = []    
+
+    assignees: List[TaskAssignee] = []
 
     model_config = {
         "from_attributes": True

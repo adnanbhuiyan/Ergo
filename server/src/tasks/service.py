@@ -37,7 +37,7 @@ def create_task(db, task_info: CreateTask, project_id: uuid.UUID, creator_id: uu
 
 def get_tasks_for_project(db, project_id: uuid.UUID):
     """
-        Retrieves all tasks for a project, including their dependency details.
+        Retrieves all tasks for a project, including their dependency details and who they are assigned to.
     """
     try:
         response = db.from_("tasks").select("*").eq("project_id", str(project_id)).execute()
@@ -45,6 +45,14 @@ def get_tasks_for_project(db, project_id: uuid.UUID):
 
         for task in tasks:
             task["depends_on"], task["blocking"] = _get_dependency_details(db, task["id"])
+
+            assignees_response = db.from_("task_members")\
+                .select("user:userprofile(*)")\
+                .eq("task_id", task["id"])\
+                .execute()
+            
+            task["assignees"] = assignees_response.data if assignees_response.data else []
+
         return tasks
     except Exception as e:
         return {"error": str(e)}
