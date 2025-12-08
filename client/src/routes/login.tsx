@@ -20,6 +20,13 @@ function Login() {
   const { login } = useAuth();
 
   const { isAuthenticated } = useAuth();
+  
+  useEffect(() => {
+    // Log API URL for debugging
+    console.log("API URL configured:", getApiUrl());
+    console.log("Environment variable VITE_API_URL:", import.meta.env.VITE_API_URL);
+  }, []);
+  
   useEffect(() => {
     if (isAuthenticated) {
       navigate({ to: "/dashboard" });
@@ -169,12 +176,12 @@ function Login() {
               >
                 Forgot Password? Click here
               </a>
-              <a
-                href="/register"
+              <Link
+                to="/register"
                 className="text-blue-600 hover:text-blue-800 underline text-sm block"
               >
                 New User? Register here
-              </a>
+              </Link>
             </div>
           </div>
         </div>
