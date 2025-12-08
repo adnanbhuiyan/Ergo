@@ -3,9 +3,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from '@tanstack/react-router'
 import { DashboardLayout } from '@/components/layouts/dashboard-layout'
-import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
-import { Table } from '@/components/ui/table'
 import { DataTable } from '@/components/tasks/data-table'
 import { columns } from "@/components/tasks/columns"
 

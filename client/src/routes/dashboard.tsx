@@ -22,8 +22,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { logout, isAuthenticated, user, session } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { isAuthenticated, user, session } = useAuth();
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
   const [activeProjects, setActiveProjects] = useState(0)

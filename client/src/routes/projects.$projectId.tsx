@@ -87,7 +87,7 @@ export const Route = createFileRoute("/projects/$projectId")({
 // --- Main Route Component ---
 
 function ProjectDetail() {
-    const { session, isAuthenticated } = useAuth()
+    const { session, isAuthenticated, user } = useAuth()
     const navigate = useNavigate()
     const { projectId } = useParams({ from: "/projects/$projectId" })
 
@@ -263,13 +263,13 @@ function ProjectDetail() {
         }
     };
 
-    const filteredMembers = members.filter(m => m.user.id !== session?.user?.id);
+    const filteredMembers = members.filter(m => m.user.id !== user?.id);
 
     const isOwner = useMemo(() => {
-        if (!session?.user?.id || members.length === 0) return false;
-        const currentUserMember = members.find(m => m.user.id === session.user.id);
-        return currentUserMember?.role === "Owner" || project?.owner_id === session.user.id;
-    }, [members, session?.user?.id, project]);
+        if (!user?.id || members.length === 0) return false;
+        const currentUserMember = members.find(m => m.user.id === user.id);
+        return currentUserMember?.role === "Owner" || project?.owner_id === user.id;
+    }, [members, user?.id, project]);
 
     return (
         <div>

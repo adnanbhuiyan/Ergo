@@ -175,7 +175,6 @@ export function GanttChart({ tasks }: GanttChartProps) {
                 index === 0 || date.getDate() === 1 || dateColumns[index - 1].getMonth() !== date.getMonth();
               const isWeekend = date.getDay() === 0 || date.getDay() === 6;
               const isToday = date.toDateString() === new Date().toDateString();
-              const isFirstOfWeek = date.getDay() === 0 || index === 0;
 
               return (
                 <div

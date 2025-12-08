@@ -1,7 +1,6 @@
-import React from "react"
 import type { ReactNode } from "react"
 import { Link } from "@tanstack/react-router"
-import { LayoutDashboard, FolderKanban, Settings, CheckSquare } from "lucide-react"
+import { LayoutDashboard, FolderKanban, CheckSquare } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar"
 import { LogOut } from "lucide-react"
@@ -46,14 +45,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                 <span>My Tasks</span>
                             </Link>
                         </ul>
-                        <ul>
+                        {/* Settings route commented out until route is created */}
+                        {/* <ul>
                             <Link to="/settings" className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 rounded-lg mx-2 transition-colors" activeProps={{
                                 className: "bg-slate-100 text-slate-900 font-medium"
                             }}>
                                 <Settings className="w-5 h-5" />
                                 <span>Settings</span>
                             </Link>
-                        </ul>
+                        </ul> */}
                     </div>
                 </nav>
                 <div className="border-t p-4 flex items-center gap-3">
