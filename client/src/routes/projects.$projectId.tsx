@@ -653,9 +653,13 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             
             try {
                 const formData = new FormData()
+
+                // Esure budget is a number
+                const safeBudget = value.budget === "" ? 0 : Number(value.budget);
+
                 formData.append("name", value.name)
                 formData.append("description", value.description)
-                formData.append("budget", String(value.budget))
+                formData.append("budget", String(safeBudget))
                 
                 // Logic for Toggling Between Active and Completed
                 if (value.is_completed) {
@@ -779,12 +783,18 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             }}>
                 {(field) => (
                     <div>
-                        <Label htmlFor="name">Project Name</Label>
+                        <Label htmlFor="name">Project Name <span className="text-red-500">*</span></Label>
                         <Input
                             id="name"
                             disabled={!isOwner}
                             value={field.state.value}
-                            onBlur={field.handleBlur}
+                            onBlur={() => {
+                                field.handleBlur();
+                                // Revert to original value if user clears the field and clicks out of the field
+                                if (field.state.value.trim().length === 0) {
+                                    field.handleChange(project.name);
+                                }
+                            }}
                             onChange={(e) => field.handleChange(e.target.value)}
                             className="mt-1"
                         />
@@ -795,40 +805,85 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
 
             {/* Description */}
             <editForm.Field name="description" validators={{
-                onChange: ({ value }) => value.length > 500 ? "Max 500 Characters" : undefined,
+                onChange: ({ value }) => {
+                    if (value.length < 3) return "Description must be at least 3 characters.";
+                    if (value.length > 500) return "Description cannot exceed 500 characters.";
+                    return undefined;
+                }
             }}>
                 {(field) => (
                     <div>
-                        <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
                         <Input
                             id="description"
                             disabled={!isOwner}
                             value={field.state.value}
-                            onBlur={field.handleBlur}
+                            onBlur={() => {
+                                field.handleBlur();
+                                // Revert to original value if user clears the field and clicks out of the field
+                                if (field.state.value.trim().length === 0) {
+                                    field.handleChange(project.description);
+                                }
+                            }}
                             onChange={(e) => field.handleChange(e.target.value)}
                             className="mt-1"
                         />
-                        {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
+                        <div className="flex justify-between mt-1">
+                            {field.state.meta.errors ? (
+                                <p className="text-red-500 text-xs">{field.state.meta.errors[0]}</p>
+                            ) : <span></span>}
+                            <span className={`text-xs ${field.state.value.length > 500 ? 'text-red-500' : 'text-gray-400'}`}>
+                                {field.state.value.length}/500
+                            </span>
+                        </div>
                     </div>
                 )}
             </editForm.Field>
 
             {/* Budget */}
             <editForm.Field name="budget" validators={{
-                onChange: ({ value }) => value < 0 ? "Budget must be at least 0" : undefined,
+                onChange: ({ value }) => {
+                    if (value === "") return undefined;
+                    if (Number(value) < 0) return "Budget cannot be negative.";
+                    return undefined;
+                },
             }}>
                 {(field) => (
                     <div>
-                        <Label htmlFor="budget">Budget</Label>
-                        <Input
-                            type="number"
-                            id="budget"
-                            disabled={!isOwner}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(Number(e.target.value))}
-                            className="mt-1"
-                        />
+                        <Label htmlFor="budget">Budget (USD) <span className="text-red-500">*</span></Label>
+                        <div className="relative mt-2">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">$</span>
+                            <Input
+                                type="number"
+                                id="budget"
+                                disabled={!isOwner}
+                                value={field.state.value}
+                                onBlur={() => {
+                                    field.handleBlur();
+                                    // Revert to original value if user clears the field and clicks out of the field
+                                    if (field.state.value === "") {
+                                        field.handleChange(project.budget);
+                                    }
+                                }}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    // Regex that allows empty string, or positive numbers with max 2 decimal places
+                                    if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) {
+                                        field.handleChange(val as any);
+                                    }
+                                }}
+                                min="0"
+                                step="0.01"
+                                className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                onKeyDown={(e) => {
+                                    // Prevent negative signs or exponent 'e'
+                                    if (e.key === '-' || e.key === 'e') {
+                                        e.preventDefault();
+                                    }
+                                }}
+                                placeholder="0.00"
+                            />
+                        </div>
                         {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
                     </div>
                 )}
@@ -853,7 +908,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             <div className="pt-4 border-t border-gray-100">
                 <Label>Manage Team Members</Label>
                 
-                {/* Search - Hide if not owner */}
+                {/* Search Field - Hide if not owner */}
                 {isOwner && (
                 <div className="relative mt-2">
                     <div className="relative">
@@ -928,14 +983,33 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             </div>
 
             {isOwner && (
-            <Button type="submit" disabled={isUpdating} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-6">
-                {isUpdating ? (
-                    <div className="flex items-center gap-2">
-                        <Spinner className="h-4 w-4" />
-                        <span>Saving Changes...</span>
-                    </div>
-                ) : "Save Changes"}
-            </Button>
+            <editForm.Subscribe
+                selector={(state) => [state.canSubmit, state.isSubmitting, state.values]}
+            >
+                {([canSubmit, isSubmitting, values]) => {
+                    // Check to ensure fields are filled before enabling submit button
+                    const isNameValid = values.name.length >= 3;
+                    const isDescValid = values.description.length >= 3 && values.description.length <= 500;
+                    const isBudgetValid = Number(values.budget) >= 0;
+                    
+                    const isFormValid = isNameValid && isDescValid && isBudgetValid;
+
+                    return (
+                        <Button 
+                            type="submit" 
+                            disabled={isUpdating || !isFormValid} 
+                            className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-6 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        >
+                            {isUpdating ? (
+                                <div className="flex items-center gap-2">
+                                    <Spinner className="h-4 w-4" />
+                                    <span>Saving Changes...</span>
+                                </div>
+                            ) : "Save Changes"}
+                        </Button>
+                    );
+                }}
+            </editForm.Subscribe>
             )}
 
         </form>
