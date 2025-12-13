@@ -43,6 +43,9 @@ async def signup_user(user: UserSignup, profile_photo: Optional[UploadFile]):
             user_profile_response = supabase.table("userprofile").insert(user_profile).execute()
             return {"message": "User Signed Up Successfully", "user_profile": user_profile_response.data[0]}
 
+        if response.user and not response.session:
+             return {"error": "User already registered. Please try logging in instead."}
+
     except AuthApiError as e:
         return {"error": e.message}
 

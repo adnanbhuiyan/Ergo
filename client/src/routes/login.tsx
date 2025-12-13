@@ -4,7 +4,17 @@ import { useNavigate, Link } from "@tanstack/react-router";
 import { useAuth } from "../contexts/AuthContext";
 import { getApiUrl } from "../lib/api"; 
 
+// The search params type
+type LoginSearch = {
+  registered?: string
+}
+
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): LoginSearch => {
+    return {
+      registered: (search.registered as string) || undefined,
+    }
+  },
   component: Login,
 });
 
@@ -15,23 +25,27 @@ function Login() {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const navigate = useNavigate();
-
-  const { login } = useAuth();
-
-  const { isAuthenticated } = useAuth();
+  // Hook to access search params
+  const search = Route.useSearch();
   
-  useEffect(() => {
-    // Log API URL for debugging
-    console.log("API URL configured:", getApiUrl());
-    console.log("Environment variable VITE_API_URL:", import.meta.env.VITE_API_URL);
-  }, []);
+  const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
   
   useEffect(() => {
     if (isAuthenticated) {
       navigate({ to: "/dashboard" });
     }
   }, [isAuthenticated, navigate]);
+
+  // Effect to check for the registration success flag
+  useEffect(() => {
+    if (search.registered === "true") {
+      setSuccess("Account created successfully! Please log in to begin creating projects.");
+      
+      // Clear the search param from URL so the message doesn't persist on refresh
+      navigate({ to: "/login", search: {}, replace: true });
+    }
+  }, [search.registered, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,8 +56,6 @@ function Login() {
     try {
       const apiUrl = getApiUrl();
       const loginUrl = `${apiUrl}/auth/login`;
-      
-      console.log("Attempting login to:", loginUrl);
       
       const response = await fetch(loginUrl, {
         method: "POST",
@@ -56,26 +68,28 @@ function Login() {
         }),
       });
 
-      console.log("Response status:", response.status);
-      
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.detail || "Login failed");
+        // Handle the different potential errors when logging in
+        if (response.status === 401) {
+          setError("Incorrect email or password. Please try again.");
+        } else if (response.status === 404) {
+            setError("The account does not exist. Please register first.");
+        } else {
+          setError(data.detail || "An unexpected error occurred during login.");
+        }
         setIsLoading(false);
         return;
       }
 
-      //Use the AuthContext login function to login
       login(data.session_data, data.user_profile);
-
-      //Navigate to the dashboard after the user logs in
       await navigate({ to: "/dashboard" });
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Network error. Please try again.";
-      setError(`Network error: ${errorMessage}. Please check your backend URL.`);
+      setError(`Network error: ${errorMessage}. Please check your connection.`);
       console.error("Login error:", err);
-      console.error("API URL being used:", getApiUrl());
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +97,7 @@ function Login() {
 
   return (
     <div className="min-h-screen w-screen flex">
-        {/* Left Column - Promotional Section */}
+        {/* Left Column */}
         <div className="hidden lg:flex lg:w-1/2 bg-slate-600 flex-col items-center justify-center px-12">
           <h1 className="text-6xl font-bold text-white mb-8">Ergo</h1>
           <p className="text-white text-lg text-center leading-relaxed max-w-md">
@@ -92,7 +106,7 @@ function Login() {
           </p>
         </div>
 
-        {/* Right Column - Login Form */}
+        {/* Right Column */}
         <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center px-8 py-12">
           <div className="w-full max-w-md">
             <Link to="/" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors">
@@ -106,19 +120,20 @@ function Login() {
             </h2>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                {error}
+              <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r">
+                <p className="font-medium">Login Failed</p>
+                <p className="text-sm">{error}</p>
               </div>
             )}
 
             {success && (
-              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-                {success}
+              <div className="mb-4 p-3 bg-green-100 border-l-4 border-green-500 text-green-700 rounded-r">
+                 <p className="font-medium">Success</p>
+                 <p className="text-sm">{success}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Email Field */}
               <div>
                 <label
                   htmlFor="email"
@@ -137,7 +152,6 @@ function Login() {
                 />
               </div>
 
-              {/* Password Field */}
               <div>
                 <label
                   htmlFor="password"
@@ -156,19 +170,15 @@ function Login() {
                 />
               </div>
 
-              {/* Social Login removed */}
-
-              {/* Enter/Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-slate-400 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
               >
                 {isLoading ? "Logging in..." : "Enter"}
               </button>
             </form>
 
-            {/* Links */}
             <div className="mt-6 space-y-3 text-center">
               <a
                 href="#"

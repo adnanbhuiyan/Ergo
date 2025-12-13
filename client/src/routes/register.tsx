@@ -12,19 +12,28 @@ export const Route = createFileRoute("/register")({
 });
 
 function Register() {
-  // Set state variables for input fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [position, setPosition] = useState("");
   const [error, setError] = useState("");
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Used for button disable state and for loading text
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Password Validation State
+  const [passValidations, setPassValidations] = useState({
+    length: false,
+    upper: false,
+    lower: false,
+    number: false,
+    special: false,
+    match: false
+  });
 
   const navigate = useNavigate();
-
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -33,6 +42,20 @@ function Register() {
     }
   }, [isAuthenticated, navigate]);
 
+  // Checks if the password meets the requirements in real-time
+  useEffect(() => {
+    setPassValidations({
+      length: password.length >= 8,
+      upper: /[A-Z]/.test(password),
+      lower: /[a-z]/.test(password),
+      number: /\d/.test(password),
+      special: /[@$!%*?&]/.test(password),
+      match: password !== "" && password === confirmPassword
+    });
+  }, [password, confirmPassword]);
+
+  const isFormValid = Object.values(passValidations).every(Boolean);
+
   interface FastAPIValidationError {
     loc: (string | number)[];
     msg: string;
@@ -40,13 +63,17 @@ function Register() {
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    //
-    e.preventDefault(); // Prevents page from reloading
+    e.preventDefault();
     setError("");
-    setIsLoading(true); // Show loading state
+
+    if (!isFormValid) {
+        setError("Please ensure all password requirements are met.");
+        return;
+    }
+
+    setIsLoading(true);
 
     const formData = new FormData();
-
     formData.append("email", email);
     formData.append("password", password);
     formData.append("first_name", firstName);
@@ -54,33 +81,27 @@ function Register() {
     formData.append("username", username);
     formData.append("position", position);
 
-    //Add profile photo if user uploads one
     if (profilePicture) {
       formData.append("profile_photo", profilePicture as Blob);
     }
 
     try {
       const response = await fetch(`${getApiUrl()}/auth/signup`, {
-        // Making post request to the FastAPI endpoint
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json(); // parse the JSON response from server
+      const data = await response.json();
 
       if (!response.ok) {
-        let errorMessage = "Registration failed. Please check your inputs.";
+        let errorMessage = "Registration failed.";
 
         const errorData: { detail?: FastAPIValidationError[] | string } = data;
 
-        if (
-          errorData.detail &&
-          Array.isArray(errorData.detail) &&
-          errorData.detail.length > 0
-        ) {
+        if (errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
           errorMessage = errorData.detail
             .map((err: FastAPIValidationError) => {
-              const field = err.loc[err.loc.length - 1]; // Get the field name
+              const field = err.loc[err.loc.length - 1];
               return `${field}: ${err.msg}`;
             })
             .join("; ");
@@ -93,29 +114,30 @@ function Register() {
         return;
       }
 
-      // Clear the form fields after form is successfully submitted
+      // Reset Form
       setEmail("");
       setPassword("");
+      setConfirmPassword("");
       setFirstName("");
       setLastName("");
       setUsername("");
       setPosition("");
       setProfilePicture(null);
 
-      navigate({ to: "/login" });
+      // Navigate to login with a search param to display the success message
+      navigate({ to: "/login", search: { registered: "true" } });
+      
     } catch (err) {
       console.log(err);
-      // Catch any error
       setError("Network error. Please try again");
     } finally {
-      // Make sure loading state is turned off no matter what
       setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen w-screen flex">
-        {/* Left Column displaying 'Ergo' and Promotion */}
+        {/* Left Column */}
         <div className="hidden lg:flex lg:w-1/2 bg-slate-600 flex-col justify-center items-center p-8">
           <h1 className="text-6xl font-bold text-white mb-8">Ergo</h1>
           <p className="text-white text-lg text-center leading-relaxed max-w-md">
@@ -124,9 +146,9 @@ function Register() {
           </p>
         </div>
 
-        {/* Right Column displaying the Registration Form */}
-        <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center p-8">
-          <div className="w-full max-w-md">
+        {/* Right Column */}
+        <div className="w-full lg:w-1/2 bg-white flex flex-col items-center justify-center p-8 overflow-y-auto h-screen">
+          <div className="w-full max-w-md my-8">
             <Link to="/" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors">
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -139,8 +161,9 @@ function Register() {
             <p className="text-gray-600 mb-6">Sign up to get started</p>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                {error}
+              <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r">
+                <p className="font-bold">Error</p>
+                <p>{error}</p>
               </div>
             )}
 
@@ -148,12 +171,7 @@ function Register() {
               {/* Name Fields */}
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label
-                    htmlFor="firstName"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    First Name
-                  </label>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                   <input
                     id="firstName"
                     type="text"
@@ -164,31 +182,21 @@ function Register() {
                   />
                 </div>
                 <div className="flex-1">
-                  <label
-                    htmlFor="lastName"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Last Name
-                  </label>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
                   <input
                     id="lastName"
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 ocus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
               </div>
 
-              {/* Username Field */}
+              {/* Username & Position */}
               <div>
-                <label
-                  htmlFor="username"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Username
-                </label>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                 <input
                   id="username"
                   type="text"
@@ -199,14 +207,8 @@ function Register() {
                 />
               </div>
 
-              {/* Position Field */}
               <div>
-                <label
-                  htmlFor="position"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Position
-                </label>
+                <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-1">Position</label>
                 <input
                   id="position"
                   type="text"
@@ -218,14 +220,9 @@ function Register() {
                 />
               </div>
 
-              {/* Profile Picture Field */}
+              {/* Profile Picture */}
               <div>
-                <label
-                  htmlFor="profilePicture"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Profile Picture (Optional)
-                </label>
+                <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-700 mb-1">Profile Picture (Optional)</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -236,40 +233,22 @@ function Register() {
                   }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-blue-500 focus:border-transparent"
                 ></input>
-                <p className="text-xs text-gray-500 mt-1">
-                  Optional. PNG, or JPG. Max 5MB
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Optional. PNG or JPG. Max 5MB</p>
                 {profilePicture && (
                   <div className="mt-3 flex items-center gap-3">
                     <img
-                      src={
-                        profilePicture
-                          ? URL.createObjectURL(profilePicture as Blob)
-                          : ""
-                      }
+                      src={URL.createObjectURL(profilePicture as Blob)}
                       alt="Profile Preview"
                       className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
                     ></img>
-                    <Button
-                      variant="outline"
-                      type="button"
-                      className=" text-white hover:text-white"
-                      onClick={() => setProfilePicture(null)}
-                    >
-                      Remove
-                    </Button>
+                    <Button variant="outline" type="button" onClick={() => setProfilePicture(null)}>Remove</Button>
                   </div>
                 )}
               </div>
 
-              {/* Email Field */}
+              {/* Email */}
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Email
-                </label>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   id="email"
                   type="email"
@@ -281,52 +260,71 @@ function Register() {
                 />
               </div>
 
-              {/* Password Field */}
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Password
-                </label>
+              {/* Password Section */}
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Must be 8+ characters with uppercase, lowercase, number, and
-                  special character (@$!%*?&)
-                </p>
+
+                {/* Password Requirements Checklist */}
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <RequirementItem met={passValidations.length} text="8+ Characters" />
+                    <RequirementItem met={passValidations.upper} text="Uppercase Letter" />
+                    <RequirementItem met={passValidations.lower} text="Lowercase Letter" />
+                    <RequirementItem met={passValidations.number} text="Number" />
+                    <RequirementItem met={passValidations.special} text="Special Character (@$!%*?&)" />
+                    <RequirementItem met={passValidations.match} text="Passwords Match" />
+                </div>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full bg-blue-600 py-2 px-4 rounded-lg text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+                disabled={isLoading || !isFormValid}
+                className="w-full bg-blue-600 py-3 px-4 rounded-lg text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
               >
                 {isLoading ? "Creating account..." : "Sign Up"}
               </button>
             </form>
 
-            {/* Login Link */}
             <p className="text-center text-sm text-gray-600 mt-6">
               Already have an account?{" "}
-              <Link
-                to="/login"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Sign In
-              </Link>
+              <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">Sign In</Link>
             </p>
           </div>
         </div>
       </div>
   );
+}
+
+function RequirementItem({ met, text }: { met: boolean; text: string }) {
+    return (
+        <div className={`flex items-center gap-1.5 ${met ? "text-green-600" : "text-gray-400"}`}>
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {met ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                )}
+            </svg>
+            <span>{text}</span>
+        </div>
+    );
 }
 
 export default Register;
