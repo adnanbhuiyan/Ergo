@@ -984,9 +984,12 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
 
             {isOwner && (
             <editForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting, state.values]}
+                selector={(state) => ({ 
+                    isSubmitting: state.isSubmitting, 
+                    values: state.values 
+                })}
             >
-                {([canSubmit, isSubmitting, values]) => {
+                {({ isSubmitting, values }) => {
                     // Check to ensure fields are filled before enabling submit button
                     const isNameValid = values.name.length >= 3;
                     const isDescValid = values.description.length >= 3 && values.description.length <= 500;
@@ -997,7 +1000,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                     return (
                         <Button 
                             type="submit" 
-                            disabled={isUpdating || !isFormValid} 
+                            disabled={isUpdating || isSubmitting || !isFormValid} 
                             className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-6 disabled:bg-slate-300 disabled:cursor-not-allowed"
                         >
                             {isUpdating ? (

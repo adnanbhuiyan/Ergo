@@ -65,7 +65,7 @@ function RouteComponent() {
   // --- Main State ---
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  
   const [error, setError] = useState("")
   const [projects, setProjects] = useState<Project[]>([]);
   const [view, setView] = useState<'grid' | 'list'>('grid')
@@ -233,11 +233,11 @@ function RouteComponent() {
     },
     onSubmit: async ({ value }) => {
       setError("")
-      setIsSubmitting(true)
+      
       const formData = new FormData()
 
       // If budget is an empty string, make it 0
-      const safeBudget = value.budget === "" ? 0 : Number(value.budget);
+      const safeBudget = String(value.budget) === "" ? 0 : Number(value.budget);
 
       if (value.name) formData.append("name", value.name)
       if (value.description) formData.append("description", value.description)
@@ -293,7 +293,7 @@ function RouteComponent() {
         if (typeof err.message === 'string') errorMessage = err.message;
         setError(errorMessage);
       } finally {
-        setIsSubmitting(false)
+        //
       }
     }
   })
@@ -449,7 +449,7 @@ function RouteComponent() {
               name="budget" 
               validators={{
                   onChange: ({ value }) => {
-                      if (value === "") return undefined;
+                      if (String(value) === "") return undefined; 
                       if (Number(value) < 0) return "Budget cannot be negative.";
                       return undefined;
                   },
@@ -467,7 +467,7 @@ function RouteComponent() {
                       onBlur={() => {
                         field.handleBlur();
                         // If user leaves field empty, reset to 0
-                        if (field.state.value === "") {
+                        if (String(field.state.value) === "") {
                             field.handleChange(0);
                         }
                       }} 
@@ -562,9 +562,9 @@ function RouteComponent() {
             </div>
 
             <form.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting, state.values]}
+                selector={(state) => ({ isSubmitting: state.isSubmitting, values: state.values })}
             >
-                {([canSubmit, isSubmitting, values]) => {
+                {({ isSubmitting, values }) => {
                   // Check to ensure fields are filled before enabling submit button
                   const isNameValid = values.name.length >= 3;
                   const isDescValid = values.description.length >= 3 && values.description.length <= 500;
