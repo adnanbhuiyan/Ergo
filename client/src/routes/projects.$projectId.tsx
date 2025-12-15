@@ -646,7 +646,6 @@ interface EditProjectFormProps {
 
 function EditProjectForm({ project, currentMembers, projectId, isOwner, onSuccess }: EditProjectFormProps) {
     const { session } = useAuth();
-    const [isUpdating, setIsUpdating] = useState(false);
     const [updateError, setUpdateError] = useState("");
 
     // Member search state
@@ -670,13 +669,9 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             if (!isOwner) return;
 
             setUpdateError("")
-            setIsUpdating(true)
 
             try {
                 const formData = new FormData()
-
-                // Esure budget is a number
-                const safeBudget = value.budget === "" ? 0 : Number(value.budget);
 
                 formData.append("name", value.name)
                 formData.append("description", value.description)
@@ -730,9 +725,8 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
 
             } catch (err: any) {
                 setUpdateError(err.message || "Failed to update project")
-            } finally {
-                setIsUpdating(false)
             }
+
         }
     })
 
@@ -1000,10 +994,10 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                         return (
                             <Button
                                 type="submit"
-                                disabled={isUpdating}
+                                disabled={isSubmitting || !isFormValid}
                                 className="w-full bg-gradient-to-r from-blue-600 to-slate-600 hover:from-blue-700 hover:to-slate-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 mt-6"
                             >
-                                {isUpdating ? (
+                                {isSubmitting ? (
                                     <span className="flex items-center justify-center gap-2">
                                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>

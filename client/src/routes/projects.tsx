@@ -236,9 +236,6 @@ function RouteComponent() {
 
       const formData = new FormData()
 
-      // If budget is an empty string, make it 0
-      const safeBudget = String(value.budget) === "" ? 0 : Number(value.budget);
-
       if (value.name) formData.append("name", value.name)
       if (value.description) formData.append("description", value.description)
       if (value.budget !== undefined && value.budget !== "") {
@@ -565,13 +562,12 @@ function RouteComponent() {
                     const isNameValid = values.name.length >= 3;
                     const isDescValid = values.description.length >= 3 && values.description.length <= 500;
                     const isBudgetValid = Number(values.budget) >= 0;
-
                     const isFormValid = isNameValid && isDescValid && isBudgetValid;
 
                     return (
                       <Button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !isFormValid}
                         className="w-full bg-gradient-to-r from-blue-600 to-slate-600 hover:from-blue-700 hover:to-slate-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 mt-6"
                       >
                         {isSubmitting ? (
