@@ -4,7 +4,7 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox" 
+import { Checkbox } from "@/components/ui/checkbox"
 import { useForm } from "@tanstack/react-form"
 import { useAuth } from "@/contexts/AuthContext";
 import { Textarea } from "./ui/textarea";
@@ -41,7 +41,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
-    
+
     // State to hold existing tasks and members
     const [existingTasks, setExistingTasks] = useState<SimpleTask[]>([])
     const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([])
@@ -88,7 +88,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
             expense: 0,
             due_date: "",
             dependency_task_ids: [] as string[],
-            assignee_ids: [] as string[] 
+            assignee_ids: [] as string[]
         },
         onSubmit: async ({ value }) => {
             setError("")
@@ -133,7 +133,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                 if (value.assignee_ids.length > 0) {
                     try {
                         await Promise.all(
-                            value.assignee_ids.map(userId => 
+                            value.assignee_ids.map(userId =>
                                 fetch(`${getApiUrl()}/tasks/${createdTask.id}/assignees?assignee_id=${userId}`, {
                                     method: 'POST',
                                     headers: { "Authorization": `Bearer ${session?.access_token}` }
@@ -148,18 +148,18 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     await fetch(`${getApiUrl()}/tasks/${createdTask.id}/assignees?assignee_id=${user.id}`, {
                         method: 'POST',
                         headers: { "Authorization": `Bearer ${session?.access_token}` }
-                    }) 
-                    
+                    })
+
                 }
 
                 // Add Multiple Dependencies
                 if (value.dependency_task_ids.length > 0) {
                     try {
                         await Promise.all(
-                            value.dependency_task_ids.map(depId => 
+                            value.dependency_task_ids.map(depId =>
                                 fetch(`${getApiUrl()}/tasks/${createdTask.id}/dependencies`, {
                                     method: 'POST',
-                                    headers: { 
+                                    headers: {
                                         "Authorization": `Bearer ${session?.access_token}`,
                                         "Content-Type": "application/json"
                                     },
@@ -192,20 +192,29 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
             <DialogTrigger asChild={true}>
                 {trigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] bg-white z-50 max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[700px] bg-gradient-to-br from-gray-50 to-white max-h-[90vh] overflow-y-auto border border-gray-200 shadow-2xl">
                 <DialogHeader>
-                    <DialogTitle>Create New Task</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold text-gray-900">Create New Task</DialogTitle>
+                    <p className="text-sm text-gray-500 mt-2">Fill in the details for your new task</p>
                 </DialogHeader>
                 {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4">
-                        {error}
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">
+                        <div className="flex items-start gap-3">
+                            <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                                <p className="font-semibold text-sm">Error</p>
+                                <p className="text-sm mt-1">{error}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
                 <form onSubmit={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     form.handleSubmit()
-                }} className="space-y-4">
+                }} className="space-y-5">
 
                     {/* Name Field */}
                     <form.Field name="name" validators={{
@@ -215,8 +224,9 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     }}>
                         {(field) => (
                             <div className="space-y-2">
-                                <Label htmlFor="name">Task Name *</Label>
+                                <Label htmlFor="name" className="text-sm font-semibold text-gray-700">Task Name *</Label>
                                 <Input
+                                    className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                     id="name"
                                     type="text"
                                     value={field.state.value}
@@ -239,8 +249,9 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                     }}>
                         {(field) => (
                             <div className="space-y-2">
-                                <Label htmlFor="description">Description *</Label>
+                                <Label htmlFor="description" className="text-sm font-semibold text-gray-700">Description *</Label>
                                 <Textarea
+                                    className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                     id="description"
                                     value={field.state.value}
                                     onBlur={field.handleBlur}
@@ -253,46 +264,49 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                         )}
                     </form.Field>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Priority Field */}
-                        <form.Field name="priority">
-                            {(field) => (
-                                <div className="space-y-2">
-                                    <Label htmlFor="priority">Priority *</Label>
-                                    <Select value={field.state.value} onValueChange={field.handleChange}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Priority"></SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent className="z-100 bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Medium">Medium</SelectItem>
-                                            <SelectItem value="High">High</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-                        </form.Field>
+                    <div className="border-t border-gray-200 pt-5 mt-5">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Task Details</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Priority Field */}
+                            <form.Field name="priority">
+                                {(field) => (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="priority" className="text-sm font-semibold text-gray-700">Priority *</Label>
+                                        <Select value={field.state.value} onValueChange={field.handleChange}>
+                                            <SelectTrigger className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all">
+                                                <SelectValue placeholder="Select Priority"></SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[100] bg-white border border-gray-200 shadow-xl rounded-xl" position="popper" sideOffset={5}>
+                                                <SelectItem value="Low">Low</SelectItem>
+                                                <SelectItem value="Medium">Medium</SelectItem>
+                                                <SelectItem value="High">High</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            </form.Field>
 
-                        {/* Status Field */}
-                        <form.Field name="status">
-                            {(field) => (
-                                <div className="space-y-2">
-                                    <Label htmlFor="status">Status *</Label>
-                                    <Select value={field.state.value} onValueChange={field.handleChange}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select Status"></SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent className="z-100 bg-white border border-gray-200 shadow-lg" position="popper" sideOffset={5}>
-                                            <SelectItem value="To-Do">To-Do</SelectItem>
-                                            <SelectItem value="In-Progress">In-Progress</SelectItem>
-                                            <SelectItem value="In-Review">In-Review</SelectItem>
-                                            <SelectItem value="Blocked">Blocked</SelectItem>
-                                            <SelectItem value="Completed">Completed</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-                        </form.Field>
+                            {/* Status Field */}
+                            <form.Field name="status">
+                                {(field) => (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="status" className="text-sm font-semibold text-gray-700">Status *</Label>
+                                        <Select value={field.state.value} onValueChange={field.handleChange}>
+                                            <SelectTrigger className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all">
+                                                <SelectValue placeholder="Select Status"></SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[100] bg-white border border-gray-200 shadow-xl rounded-xl" position="popper" sideOffset={5}>
+                                                <SelectItem value="To-Do">To-Do</SelectItem>
+                                                <SelectItem value="In-Progress">In-Progress</SelectItem>
+                                                <SelectItem value="In-Review">In-Review</SelectItem>
+                                                <SelectItem value="Blocked">Blocked</SelectItem>
+                                                <SelectItem value="Completed">Completed</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            </form.Field>
+                        </div>
                     </div>
 
                     {/* --- Task Assignees Field --- */}
@@ -306,7 +320,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                     ) : (
                                         projectMembers.map((member) => (
                                             <div key={member.user.id} className="flex items-center space-x-2">
-                                                <Checkbox 
+                                                <Checkbox
                                                     id={`assignee-${member.user.id}`}
                                                     checked={field.state.value.includes(member.user.id)}
                                                     onCheckedChange={(checked) => {
@@ -318,8 +332,8 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                                         }
                                                     }}
                                                 />
-                                                <Label 
-                                                    htmlFor={`assignee-${member.user.id}`} 
+                                                <Label
+                                                    htmlFor={`assignee-${member.user.id}`}
                                                     className="flex items-center gap-2 text-sm font-normal cursor-pointer w-full"
                                                 >
                                                     <Avatar className="h-6 w-6">
@@ -329,7 +343,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <span className="truncate">
-                                                        {member.user.first_name} {member.user.last_name} 
+                                                        {member.user.first_name} {member.user.last_name}
                                                         <span className="text-gray-400 ml-1">(@{member.user.username})</span>
                                                     </span>
                                                 </Label>
@@ -352,7 +366,7 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                     ) : (
                                         existingTasks.map((task) => (
                                             <div key={task.id} className="flex items-center space-x-2">
-                                                <Checkbox 
+                                                <Checkbox
                                                     id={`dep-${task.id}`}
                                                     checked={field.state.value.includes(task.id)}
                                                     onCheckedChange={(checked) => {
@@ -364,8 +378,8 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                                         }
                                                     }}
                                                 />
-                                                <Label 
-                                                    htmlFor={`dep-${task.id}`} 
+                                                <Label
+                                                    htmlFor={`dep-${task.id}`}
                                                     className="text-sm font-normal cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                                 >
                                                     {task.name}
@@ -385,20 +399,23 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                         {/* Estimated Time Field */}
                         <form.Field name="estimated_completion_time" validators={{
                             onChange: ({ value }) => {
-                                if (value < 0) return "Must be 0 or greater"
-                            }
+                                const num = Number(value);
+                                return num < 0 ? "Must be 0 or greater" : undefined;
+                            },
                         }}>
                             {(field) => (
                                 <div className="space-y-2">
-                                    <Label htmlFor="estimated_completion_time">Est. Hours *</Label>
+                                    <Label htmlFor="estimated_completion_time" className="text-sm font-semibold text-gray-700">Est. Hours *</Label>
                                     <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                         id="estimated_completion_time"
                                         type="number"
-                                        min="0"
-                                        value={field.state.value}
+                                        value={field.state.value === 0 ? "" : field.state.value}
                                         onBlur={field.handleBlur}
-                                        onChange={(e) => field.handleChange(Number(e.target.value))}
-                                        placeholder="0"
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.handleChange(val === "" ? 0 : Number(val));
+                                        }}
                                     />
                                     {field.state.meta.errors && field.state.meta.errors.length > 0 && (
                                         <p className="text-red-500 text-sm">{field.state.meta.errors[0]}</p>
@@ -406,13 +423,71 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                                 </div>
                             )}
                         </form.Field>
+                    </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Budget Field */}
+                        <form.Field name="budget" validators={{
+                            onChange: ({ value }) => {
+                                const num = Number(value);
+                                return num < 0 ? "Must be 0 or greater" : undefined;
+                            },
+                        }}>
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="budget" className="text-sm font-semibold text-gray-700">Budget *</Label>
+                                    <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                                        id="budget"
+                                        type="number"
+                                        step="0.01"
+                                        value={field.state.value === 0 ? "" : field.state.value}
+                                        onBlur={field.handleBlur}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.handleChange(val === "" ? 0 : Number(val));
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </form.Field>
+
+                        {/* Expense Field */}
+                        <form.Field name="expense" validators={{
+                            onChange: ({ value }) => {
+                                const num = Number(value);
+                                return num < 0 ? "Must be 0 or greater" : undefined;
+                            },
+                        }}>
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="expense" className="text-sm font-semibold text-gray-700">Expense *</Label>
+                                    <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                                        id="expense"
+                                        type="number"
+                                        step="0.01"
+                                        value={field.state.value === 0 ? "" : field.state.value}
+                                        onBlur={field.handleBlur}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.handleChange(val === "" ? 0 : Number(val));
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </form.Field>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-5 pt-5">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Timeline</h3>
                         {/* Due Date Field */}
                         <form.Field name="due_date">
                             {(field) => (
                                 <div className="space-y-2">
-                                    <Label htmlFor="due_date">Due Date *</Label>
+                                    <Label htmlFor="due_date" className="text-sm font-semibold text-gray-700">Due Date *</Label>
                                     <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                         id="due_date"
                                         type="date"
                                         value={field.state.value}
@@ -424,56 +499,20 @@ export function CreateTaskModal({ projectId, onTaskCreated, trigger, defaultStat
                         </form.Field>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Budget Field */}
-                        <form.Field name="budget" validators={{
-                            onChange: ({ value }) => {
-                                if (value < 0) return "Must be 0 or greater"
-                            }
-                        }}>
-                            {(field) => (
-                                <div className="space-y-2">
-                                    <Label htmlFor="budget">Budget *</Label>
-                                    <Input
-                                        id="budget"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={field.state.value}
-                                        onBlur={field.handleBlur}
-                                        onChange={(e) => field.handleChange(Number(e.target.value))}
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            )}
-                        </form.Field>
-
-                        {/* Expense Field */}
-                        <form.Field name="expense" validators={{
-                            onChange: ({ value }) => {
-                                if (value < 0) return "Must be 0 or greater"
-                            }
-                        }}>
-                            {(field) => (
-                                <div className="space-y-2">
-                                    <Label htmlFor="expense">Expense *</Label>
-                                    <Input
-                                        id="expense"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={field.state.value}
-                                        onBlur={field.handleBlur}
-                                        onChange={(e) => field.handleChange(Number(e.target.value))}
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            )}
-                        </form.Field>
-                    </div>
-
-                    <Button type="submit" disabled={isLoading} className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-4">
-                        {isLoading ? "Creating ..." : "Create Task"}
+                    <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className="bg-gradient-to-r from-blue-600 to-slate-600 hover:from-blue-700 hover:to-slate-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                    >
+                        {isLoading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Creating...
+                            </span>
+                        ) : "Create Task"}
                     </Button>
                 </form>
             </DialogContent>

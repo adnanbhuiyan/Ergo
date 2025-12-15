@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
-import { Bell, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getApiUrl } from "../lib/api";
 
@@ -18,6 +18,7 @@ function Dashboard() {
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
   const [activeProjects, setActiveProjects] = useState(0)
+  const [totalActiveTasks, setTotalActiveTasks] = useState(0)
 
   const navigate = useNavigate();
 
@@ -84,6 +85,14 @@ function Dashboard() {
         return dateA - dateB
       })
 
+      const now = new Date()
+      const activeTasks = allTasks.filter(task => {
+        const dueDate = new Date(task.due_date)
+        return dueDate >= now && task.status !== "Completed"
+      })
+
+      setTotalActiveTasks(activeTasks.length)
+
       const upcomingFive = allTasks.slice(0, 5)
 
       setUpcomingTasks(upcomingFive)
@@ -127,7 +136,6 @@ function Dashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex items-center gap-4">
               <Button variant="default" className="text-white font-medium">Create Project</Button>
-              <Button variant="default" className="cursor-pointer hover:bg-gray-100"><Bell></Bell></Button>
             </div>
           </div>
           {/* Overview Section */}
@@ -141,10 +149,9 @@ function Dashboard() {
                 </div>
               </div>
               <div className="bg-white rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-gray-600 mb-2">Total Tasks</p>
+                <p className="text-sm text-gray-600 mb-2">Active Tasks</p>
                 <div className="flex">
-                  <p className="text-3xl font-bold text-gray-900">0</p>
-                </div>
+                  <p className="text-3xl font-bold text-gray-900">{totalActiveTasks}</p>                </div>
               </div>
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <p className="text-sm text-gray-600 mb-2">Completed Tasks</p>
@@ -169,7 +176,7 @@ function Dashboard() {
             {!tasksLoading && upcomingTasks.length > 0 && (
               <div className="space-y-3">
                 {upcomingTasks.map((task) => (
-                  <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                  <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 hover:border-blue-300 transition-all cursor-pointer" onClick={() => navigate({ to: `/projects/${task.project_id}` })}>
                     {/* Left Side of Task Row */}
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -190,9 +197,14 @@ function Dashboard() {
                       </div>
                     </div>
                     {/* Right Side of Task Row */}
-                    <div className="text-right ml-4">
-                      <p className="text-xs text-gray-500 mb-1">Due</p>
-                      <p className="text-sm font-medium text-gray-900">{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                    <div className="text-right ml-4 items-center gap-2">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Due</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
                     </div>
                   </div>
                 ))}

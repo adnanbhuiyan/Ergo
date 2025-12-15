@@ -99,12 +99,12 @@ function ProjectDetail() {
     const [error, setError] = useState("")
     const [tasks, setTasks] = useState<Task[]>([])
     const [tasksLoading, setTasksLoading] = useState(false)
-    
+
     // --- Edit/Delete State ---
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isEditTaskOpen, setIsEditTaskOpen] = useState(false)
     const [editingTask, setEditingTask] = useState<Task | null>(null)
-    
+
     // Delete Task State
     const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false)
@@ -214,7 +214,7 @@ function ProjectDetail() {
 
             //Remove task assignees
             if (taskToDelete.assignees && taskToDelete.assignees.length > 0) {
-                await Promise.all(taskToDelete.assignees.map(assignee => 
+                await Promise.all(taskToDelete.assignees.map(assignee =>
                     fetch(`${getApiUrl()}/tasks/${taskToDelete.id}/assignees/${assignee.user.id}`, {
                         method: "DELETE",
                         headers
@@ -272,6 +272,10 @@ function ProjectDetail() {
         return currentUserMember?.role === "Owner" || project?.owner_id === user.id;
     }, [members, user?.id, project]);
 
+    const isTaskOwner = (task: Task) => {
+        return task.created_by === (session as any)?.user?.id;
+    }
+
     return (
         <div>
             {isLoading && (
@@ -307,7 +311,7 @@ function ProjectDetail() {
                                 </div>
                             </div>
 
-                           
+
                             <div className="flex items-center gap-6 md:ml-auto">
                                 {members.length > 0 && (
                                     <div className="flex flex-col items-end">
@@ -323,7 +327,7 @@ function ProjectDetail() {
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     </HoverCardTrigger>
-                                                    
+
                                                     <HoverCardContent className="w-80 bg-slate-900 border-slate-800 text-slate-100 shadow-xl">
                                                         <div className="flex justify-between space-x-4">
                                                             <Avatar className="h-12 w-12 ring-2 ring-slate-700">
@@ -341,7 +345,7 @@ function ProjectDetail() {
                                                                     {member.user.username && <span className="text-xs text-slate-400">@{member.user.username}</span>}
                                                                 </div>
                                                                 <div className="flex items-center pt-2">
-                                                                    <Mail className="mr-2 h-3 w-3 text-slate-500" /> 
+                                                                    <Mail className="mr-2 h-3 w-3 text-slate-500" />
                                                                     <span className="text-xs text-slate-400">{member.user.email}</span>
                                                                 </div>
                                                                 {member.user.position && (
@@ -396,24 +400,28 @@ function ProjectDetail() {
                                     </p>
                                 </div>
 
-                            
+
                                 <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="icon" className="ml-2">
                                             <Settings className="w-5 h-5 text-gray-600" />
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[600px] bg-white z-50 max-h-[90vh] overflow-y-auto">
+                                    <DialogContent className="sm:max-w-[700px] bg-gradient-to-br from-gray-50 to-white z-50 max-h-[90vh] overflow-y-auto border border-gray-200 shadow-2xl">
                                         <DialogHeader>
-                                            <DialogTitle>Project Settings {isOwner ? "" : "(Viewer Permissions Only)"}</DialogTitle>
-                                        </DialogHeader>
+                                            <DialogTitle className="text-2xl font-bold text-gray-900">
+                                                Project Settings {isOwner ? "" : "(Viewer Permissions Only)"}
+                                            </DialogTitle>
+                                            <p className="text-sm text-gray-500 mt-2">
+                                                {isOwner ? "Update project details and manage team" : "View project information"}
+                                            </p>                                        </DialogHeader>
                                         {isEditModalOpen && (
-                                            <EditProjectForm 
-                                                project={project} 
-                                                currentMembers={members} 
-                                                projectId={projectId} 
+                                            <EditProjectForm
+                                                project={project}
+                                                currentMembers={members}
+                                                projectId={projectId}
                                                 isOwner={isOwner}
-                                                onSuccess={handleProjectUpdate} 
+                                                onSuccess={handleProjectUpdate}
                                             />
                                         )}
                                     </DialogContent>
@@ -424,10 +432,22 @@ function ProjectDetail() {
                     </div>
 
                     <Tabs defaultValue="kanban" className="flex-1">
-                        <TabsList className="border-b px-6 bg-white">
-                            <TabsTrigger value="kanban">Kanban Board</TabsTrigger>
-                            <TabsTrigger value="gantt">Gantt Chart</TabsTrigger>
-                        </TabsList>
+                        <div className="px-6 py-4 bg-white border-b">
+                            <TabsList className="inline-flex items-center rounded-xl bg-gray-100 p-1 shadow-sm border-0">
+                                <TabsTrigger
+                                    value="kanban"
+                                    className="px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-slate-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-gray-900 data-[state=inactive]:hover:bg-gray-50"
+                                >
+                                    Kanban Board
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="gantt"
+                                    className="px-6 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-slate-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:text-gray-900 data-[state=inactive]:hover:bg-gray-50"
+                                >
+                                    Gantt Chart
+                                </TabsTrigger>
+                            </TabsList>
+                        </div>
                         <TabsContent value="kanban" className="p-6">
                             {tasksLoading && (
                                 <div className="flex items-center gap-2"><Spinner />Loading tasks...</div>
@@ -497,7 +517,7 @@ function ProjectDetail() {
 
                                                     {/* Footer: Dependencies and Assignees */}
                                                     <div className="flex items-end justify-between mt-3 pt-2 border-t border-gray-100 min-h-6">
-                                                        
+
                                                         {/* Left Side: Dependencies */}
                                                         <div className="flex-1 flex flex-wrap gap-1">
                                                             {task.depends_on && task.depends_on.length > 0 && (
@@ -507,9 +527,9 @@ function ProjectDetail() {
                                                                         const depTask = tasks.find(t => t.id === depId);
                                                                         const isDepCompleted = depTask?.status === "Completed";
                                                                         return (
-                                                                            <Badge 
-                                                                                key={depId} 
-                                                                                variant="outline" 
+                                                                            <Badge
+                                                                                key={depId}
+                                                                                variant="outline"
                                                                                 className={`text-[9px] px-1.5 py-0 h-5 border-amber-200 bg-amber-50 text-amber-700 truncate max-w-[100px] flex items-center gap-1 ${isDepCompleted ? 'line-through opacity-60' : ''}`}
                                                                                 title={depTask?.name || "Dependency"}
                                                                             >
@@ -572,6 +592,7 @@ function ProjectDetail() {
             {editingTask && (
                 <EditTaskModal
                     task={editingTask}
+                    isOwner={isTaskOwner(editingTask)}
                     isOpen={isEditTaskOpen}
                     onClose={() => {
                         setIsEditTaskOpen(false);
@@ -598,7 +619,7 @@ function ProjectDetail() {
                         <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={(e) => {
-                                e.preventDefault(); 
+                                e.preventDefault();
                                 handleDeleteTask();
                             }}
                             className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
@@ -627,12 +648,12 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
     const { session } = useAuth();
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateError, setUpdateError] = useState("");
-    
+
     // Member search state
     const [userQuery, setUserQuery] = useState("");
     const [userSearchResults, setUserSearchResults] = useState<User[]>([]);
     const [isSearchingUsers, setIsSearchingUsers] = useState(false);
-    
+
     // Form state for members (initialized from props)
     const [formMembers, setFormMembers] = useState<SelectedUser[]>(
         currentMembers.map(m => ({ ...m.user, role: m.role }))
@@ -642,15 +663,15 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
         defaultValues: {
             name: project.name || "",
             description: project.description || "",
-            budget: project.budget || 0,
+            budget: project.budget || "",
             is_completed: !!project.completed_at
         },
         onSubmit: async ({ value }) => {
-            if (!isOwner) return; 
+            if (!isOwner) return;
 
             setUpdateError("")
             setIsUpdating(true)
-            
+
             try {
                 const formData = new FormData()
 
@@ -659,8 +680,8 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
 
                 formData.append("name", value.name)
                 formData.append("description", value.description)
-                formData.append("budget", String(safeBudget))
-                
+                formData.append("budget", value.budget || "0")
+
                 // Logic for Toggling Between Active and Completed
                 if (value.is_completed) {
                     if (!project.completed_at) {
@@ -669,7 +690,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 } else {
                     formData.append("completed_at", "")
                 }
-                
+
                 // PUT Request to Update Project Details
                 const response = await fetch(`${getApiUrl()}/projects/${projectId}`, {
                     method: "PUT",
@@ -687,7 +708,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                 const usersToRemove = currentMembers.filter(m => !formMembers.some(fm => fm.id === m.user.id));
 
                 await Promise.all([
-                    ...usersToAdd.map(u => 
+                    ...usersToAdd.map(u =>
                         fetch(`${getApiUrl()}/projects/${projectId}/members`, {
                             method: "POST",
                             headers: {
@@ -697,7 +718,7 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                             body: JSON.stringify({ user_id: u.id, role: u.role })
                         })
                     ),
-                    ...usersToRemove.map(m => 
+                    ...usersToRemove.map(m =>
                         fetch(`${getApiUrl()}/projects/${projectId}/members/${m.user.id}`, {
                             method: "DELETE",
                             headers: { "Authorization": `Bearer ${session?.access_token}` }
@@ -771,10 +792,20 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             e.preventDefault()
             e.stopPropagation()
             if (isOwner) editForm.handleSubmit()
-        }} className="space-y-4">
-            
+        }} className="space-y-5">
+
             {updateError && (
-                <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4 text-sm">{updateError}</div>
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">
+                    <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <p className="font-semibold text-sm">Error</p>
+                            <p className="text-sm mt-1">{updateError}</p>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Name */}
@@ -783,20 +814,14 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             }}>
                 {(field) => (
                     <div>
-                        <Label htmlFor="name">Project Name <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="name" className="text-sm font-semibold text-gray-700 mb-2">Project Name</Label>
                         <Input
                             id="name"
                             disabled={!isOwner}
                             value={field.state.value}
-                            onBlur={() => {
-                                field.handleBlur();
-                                // Revert to original value if user clears the field and clicks out of the field
-                                if (field.state.value.trim().length === 0) {
-                                    field.handleChange(project.name);
-                                }
-                            }}
+                            onBlur={field.handleBlur}
                             onChange={(e) => field.handleChange(e.target.value)}
-                            className="mt-1"
+                            className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                         />
                         {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
                     </div>
@@ -813,20 +838,14 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             }}>
                 {(field) => (
                     <div>
-                        <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="description" className="text-sm font-semibold text-gray-700 mb-2">Description <span className="text-red-500">*</span></Label>
                         <Input
                             id="description"
                             disabled={!isOwner}
                             value={field.state.value}
-                            onBlur={() => {
-                                field.handleBlur();
-                                // Revert to original value if user clears the field and clicks out of the field
-                                if (field.state.value.trim().length === 0) {
-                                    field.handleChange(project.description);
-                                }
-                            }}
+                            onBlur={field.handleBlur}
                             onChange={(e) => field.handleChange(e.target.value)}
-                            className="mt-1"
+                            className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                         />
                         <div className="flex justify-between mt-1">
                             {field.state.meta.errors ? (
@@ -850,38 +869,18 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             }}>
                 {(field) => (
                     <div>
-                        <Label htmlFor="budget">Budget (USD) <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="budget" className="text-sm font-semibold text-gray-700">Budget (USD) <span className="text-red-500">*</span></Label>
                         <div className="relative mt-2">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">$</span>
                             <Input
                                 type="number"
                                 id="budget"
-                                disabled={!isOwner}
-                                value={field.state.value}
-                                onBlur={() => {
-                                    field.handleBlur();
-                                    // Revert to original value if user clears the field and clicks out of the field
-                                    if (field.state.value === "") {
-                                        field.handleChange(project.budget);
-                                    }
-                                }}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    // Regex that allows empty string, or positive numbers with max 2 decimal places
-                                    if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) {
-                                        field.handleChange(val as any);
-                                    }
-                                }}
-                                min="0"
                                 step="0.01"
-                                className="pl-7 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                onKeyDown={(e) => {
-                                    // Prevent negative signs or exponent 'e'
-                                    if (e.key === '-' || e.key === 'e') {
-                                        e.preventDefault();
-                                    }
-                                }}
                                 placeholder="0.00"
+                                disabled={!isOwner}
+                                value={field.state.value === 0 || field.state.value === "0" ? "" : field.state.value}
+                                onBlur={field.handleBlur}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                             />
                         </div>
                         {field.state.meta.errors ? <p className="text-red-500 text-sm mt-1">{field.state.meta.errors[0]}</p> : null}
@@ -893,65 +892,66 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             <editForm.Field name="is_completed">
                 {(field) => (
                     <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox 
-                            id="is_completed" 
+                        <Checkbox
+                            id="is_completed"
                             disabled={!isOwner}
-                            checked={field.state.value} 
-                            onCheckedChange={(checked) => field.handleChange(checked === true)} 
+                            checked={field.state.value}
+                            onCheckedChange={(checked) => field.handleChange(checked === true)}
                         />
-                        <Label htmlFor="is_completed" className="font-normal">Mark project as completed</Label>
+                        <Label htmlFor="is_completed" className="font-normal text-sm font-semibold text-gray-700">Mark project as completed</Label>
                     </div>
                 )}
             </editForm.Field>
 
             {/* Manage Members */}
-            <div className="pt-4 border-t border-gray-100">
-                <Label>Manage Team Members</Label>
-                
+            <div className="pt-5 border-t border-gray-200 mt-5">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Manage Team Members</h3>
+                <p className="text-xs text-gray-500 mb-3">Add or remove collaborators from your project</p>
+
                 {/* Search Field - Hide if not owner */}
                 {isOwner && (
-                <div className="relative mt-2">
-                    <div className="relative">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                        <Input
-                            placeholder="Add users by username or email..."
-                            className="pl-8"
-                            value={userQuery}
-                            onChange={(e) => setUserQuery(e.target.value)}
-                        />
-                    </div>
-                    {userQuery.length >= 2 && (
-                        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                            {isSearchingUsers ? (
-                                <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
-                            ) : userSearchResults.length > 0 ? (
-                                userSearchResults.map((user) => (
-                                    <div
-                                        key={user.id}
-                                        className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
-                                        onClick={() => {
-                                            setFormMembers([...formMembers, { ...user, role: "Member" }]);
-                                            setUserQuery("");
-                                            setUserSearchResults([]);
-                                        }}
-                                    >
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={user.profile_photo_url} />
-                                            <AvatarFallback>{getInitials(user)}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-gray-900">{getDisplayName(user)}</p>
-                                            <p className="text-xs text-gray-500">{user.email}</p>
-                                        </div>
-                                        <UserPlus className="h-4 w-4 text-gray-400" />
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="p-4 text-center text-sm text-gray-500">No users found.</div>
-                            )}
+                    <div className="relative mt-2">
+                        <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                            <Input
+                                placeholder="Add users by username or email..."
+                                className="pl-8 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                                value={userQuery}
+                                onChange={(e) => setUserQuery(e.target.value)}
+                            />
                         </div>
-                    )}
-                </div>
+                        {userQuery.length >= 2 && (
+                            <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-xl mt-1 max-h-60 overflow-y-auto">
+                                {isSearchingUsers ? (
+                                    <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
+                                ) : userSearchResults.length > 0 ? (
+                                    userSearchResults.map((user) => (
+                                        <div
+                                            key={user.id}
+                                            className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
+                                            onClick={() => {
+                                                setFormMembers([...formMembers, { ...user, role: "Member" }]);
+                                                setUserQuery("");
+                                                setUserSearchResults([]);
+                                            }}
+                                        >
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={user.profile_photo_url} />
+                                                <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-900">{getDisplayName(user)}</p>
+                                                <p className="text-xs text-gray-500">{user.email}</p>
+                                            </div>
+                                            <UserPlus className="h-4 w-4 text-gray-400" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-center text-sm text-gray-500">No users found.</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {/* Active Member List in Form */}
@@ -959,22 +959,22 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
                     <p className="text-xs font-medium text-gray-500 uppercase">Current Team ({formMembers.length})</p>
                     <div className="flex flex-wrap gap-2">
                         {formMembers.map((user) => (
-                            <div key={user.id} className="flex items-center gap-2 bg-slate-100 text-slate-800 px-3 py-1.5 rounded-full text-sm">
+                            <div key={user.id} className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1.5 rounded-full text-sm">
                                 <Avatar className="h-5 w-5">
                                     <AvatarImage src={user.profile_photo_url} />
                                     <AvatarFallback className="text-[10px]">{getInitials(user)}</AvatarFallback>
                                 </Avatar>
                                 <span>{user.username}</span>
-                                <span className="text-xs text-slate-500 border-l pl-2 border-slate-300">{user.role}</span>
+                                <span className="text-xs text-blue-600 border-l pl-2 border-blue-300">{user.role}</span>
                                 {/* Only show remove button if user is owner and they are not removing themselves */}
                                 {isOwner && (
-                                <button
-                                    type="button"
-                                    onClick={() => setFormMembers(formMembers.filter(m => m.id !== user.id))}
-                                    className="hover:bg-slate-200 rounded-full p-0.5 transition-colors"
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormMembers(formMembers.filter(m => m.id !== user.id))}
+                                        className="hover:bg-blue-100 rounded-full p-0.5 transition-colors"
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
                                 )}
                             </div>
                         ))}
@@ -983,36 +983,39 @@ function EditProjectForm({ project, currentMembers, projectId, isOwner, onSucces
             </div>
 
             {isOwner && (
-            <editForm.Subscribe
-                selector={(state) => ({ 
-                    isSubmitting: state.isSubmitting, 
-                    values: state.values 
-                })}
-            >
-                {({ isSubmitting, values }) => {
-                    // Check to ensure fields are filled before enabling submit button
-                    const isNameValid = values.name.length >= 3;
-                    const isDescValid = values.description.length >= 3 && values.description.length <= 500;
-                    const isBudgetValid = Number(values.budget) >= 0;
-                    
-                    const isFormValid = isNameValid && isDescValid && isBudgetValid;
+                <editForm.Subscribe
+                    selector={(state) => ({
+                        isSubmitting: state.isSubmitting,
+                        values: state.values
+                    })}
+                >
+                    {({ isSubmitting, values }) => {
+                        // Check to ensure fields are filled before enabling submit button
+                        const isNameValid = values.name.length >= 3;
+                        const isDescValid = values.description.length >= 3 && values.description.length <= 500;
+                        const isBudgetValid = Number(values.budget) >= 0;
 
-                    return (
-                        <Button 
-                            type="submit" 
-                            disabled={isUpdating || isSubmitting || !isFormValid} 
-                            className="w-full bg-slate-600 hover:bg-slate-700 text-white mt-6 disabled:bg-slate-300 disabled:cursor-not-allowed"
-                        >
-                            {isUpdating ? (
-                                <div className="flex items-center gap-2">
-                                    <Spinner className="h-4 w-4" />
-                                    <span>Saving Changes...</span>
-                                </div>
-                            ) : "Save Changes"}
-                        </Button>
-                    );
-                }}
-            </editForm.Subscribe>
+                        const isFormValid = isNameValid && isDescValid && isBudgetValid;
+
+                        return (
+                            <Button
+                                type="submit"
+                                disabled={isUpdating}
+                                className="w-full bg-gradient-to-r from-blue-600 to-slate-600 hover:from-blue-700 hover:to-slate-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 mt-6"
+                            >
+                                {isUpdating ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Saving Changes...
+                                    </span>
+                                ) : "Save Changes"}
+                            </Button>
+                        );
+                    }}
+                </editForm.Subscribe>
             )}
 
         </form>

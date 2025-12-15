@@ -68,22 +68,23 @@ interface User {
 
 interface EditTaskModalProps {
     task: Task;
+    isOwner: boolean;
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModalProps) {
+export function EditTaskModal({ task, isOwner, isOpen, onClose, onSuccess }: EditTaskModalProps) {
     const { session } = useAuth();
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateError, setUpdateError] = useState("");
 
     // State for differing changes in task assignees on submit
     const [currentAssignees, setCurrentAssignees] = useState<User[]>([]);
-    
+
     // State for the UI selection
     const [formAssignees, setFormAssignees] = useState<User[]>([]);
-    
+
     // All available project members
     const [projectMembers, setProjectMembers] = useState<User[]>([]);
 
@@ -229,10 +230,21 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px] bg-white max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[700px] bg-gradient-to-br from-gray-50 to-white max-h-[90vh] overflow-y-auto border border-gray-200 shadow-2xl">
                 <DialogHeader>
-                    <DialogTitle>Edit Task</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold text-gray-900">Edit Task {isOwner ? "" : "(Viewer Permissions Only)"}</DialogTitle>
+                    <p className="text-sm text-gray-500 mt-2">
+                        {isOwner ? "Update task details and assignments" : "View task information"}
+                    </p>
                 </DialogHeader>
+
+                {!isOwner && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                            <span className="font-semibold">View Only:</span> You can view this task but cannot make changes. Only the task creator can edit.
+                        </p>
+                    </div>
+                )}
 
                 {updateError && (
                     <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4">
@@ -244,17 +256,19 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                     onSubmit={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        editForm.handleSubmit();
+                        if (isOwner) editForm.handleSubmit();
                     }}
-                    className="space-y-4"
+                    className="space-y-5"
                 >
                     {/* Task Name */}
                     <editForm.Field name="name">
                         {(field) => (
                             <div className="space-y-2">
-                                <Label htmlFor="name">Task Name *</Label>
+                                <Label htmlFor="name" className="text-sm font-semibold text-gray-700">Task Name *</Label>
                                 <Input
+                                    className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                     id="name"
+                                    disabled={!isOwner}
                                     value={field.state.value}
                                     onBlur={field.handleBlur}
                                     onChange={(e) => field.handleChange(e.target.value)}
@@ -267,69 +281,76 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                     <editForm.Field name="description">
                         {(field) => (
                             <div className="space-y-2">
-                                <Label htmlFor="description">Description *</Label>
+                                <Label htmlFor="description" className="text-sm font-semibold text-gray-700">Description *</Label>
                                 <Textarea
                                     id="description"
+                                    disabled={!isOwner}
                                     value={field.state.value}
                                     onBlur={field.handleBlur}
                                     onChange={(e) => field.handleChange(e.target.value)}
                                     rows={3}
+                                    className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                 />
                             </div>
                         )}
                     </editForm.Field>
 
-                    {/* Priority and Status */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <editForm.Field name="priority">
-                            {(field) => (
-                                <div className="space-y-2">
-                                    <Label>Priority *</Label>
-                                    <Select
-                                        value={field.state.value}
-                                        onValueChange={field.handleChange}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent
-                                            position="popper"
-                                            className="z-100 bg-white border border-gray-200 shadow-lg"
+                    <div className="border-t border-gray-200 pt-5 mt-5">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Task Details</h3>
+                        {/* Priority and Status */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <editForm.Field name="priority">
+                                {(field) => (
+                                    <div className="space-y-2">
+                                        <Label>Priority *</Label>
+                                        <Select
+                                            value={field.state.value}
+                                            onValueChange={field.handleChange}
+                                            disabled={!isOwner}
                                         >
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Medium">Medium</SelectItem>
-                                            <SelectItem value="High">High</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-                        </editForm.Field>
+                                            <SelectTrigger className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent
+                                                position="popper"
+                                                className="z-[100] bg-white border border-gray-200 shadow-xl rounded-xl"
+                                            >
+                                                <SelectItem value="Low">Low</SelectItem>
+                                                <SelectItem value="Medium">Medium</SelectItem>
+                                                <SelectItem value="High">High</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            </editForm.Field>
 
-                        <editForm.Field name="status">
-                            {(field) => (
-                                <div className="space-y-2">
-                                    <Label>Status *</Label>
-                                    <Select
-                                        value={field.state.value}
-                                        onValueChange={field.handleChange}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent
-                                            position="popper"
-                                            className="z-100 bg-white border border-gray-200 shadow-lg"
+                            <editForm.Field name="status">
+                                {(field) => (
+                                    <div className="space-y-2">
+                                        <Label>Status *</Label>
+                                        <Select
+                                            value={field.state.value}
+                                            onValueChange={field.handleChange}
+                                            disabled={!isOwner}
                                         >
-                                            <SelectItem value="To-Do">To-Do</SelectItem>
-                                            <SelectItem value="In-Progress">In-Progress</SelectItem>
-                                            <SelectItem value="In-Review">In-Review</SelectItem>
-                                            <SelectItem value="Blocked">Blocked</SelectItem>
-                                            <SelectItem value="Completed">Completed</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-                        </editForm.Field>
+                                            <SelectTrigger className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent
+                                                position="popper"
+                                                className="z-[100] bg-white border border-gray-200 shadow-xl rounded-xl"
+                                            >
+                                                <SelectItem value="To-Do">To-Do</SelectItem>
+                                                <SelectItem value="In-Progress">In-Progress</SelectItem>
+                                                <SelectItem value="In-Review">In-Review</SelectItem>
+                                                <SelectItem value="Blocked">Blocked</SelectItem>
+                                                <SelectItem value="Completed">Completed</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            </editForm.Field>
+                        </div>
                     </div>
 
                     {/* Budget, Expense, Hours */}
@@ -337,14 +358,19 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                         <editForm.Field name="budget">
                             {(field) => (
                                 <div className="space-y-2">
-                                    <Label htmlFor="budget">Budget *</Label>
+                                    <Label htmlFor="budget" className="text-sm font-semibold text-gray-700">Budget *</Label>
                                     <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                         id="budget"
                                         type="number"
                                         step="0.01"
-                                        value={field.state.value}
+                                        disabled={!isOwner}
+                                        value={field.state.value === 0 ? "" : field.state.value}
                                         onBlur={field.handleBlur}
-                                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.handleChange(val === "" ? 0 : Number(val));
+                                        }}
                                     />
                                 </div>
                             )}
@@ -353,14 +379,19 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                         <editForm.Field name="expense">
                             {(field) => (
                                 <div className="space-y-2">
-                                    <Label htmlFor="expense">Expense *</Label>
+                                    <Label htmlFor="expense" className="text-sm font-semibold text-gray-700">Expense *</Label>
                                     <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                         id="expense"
                                         type="number"
                                         step="0.01"
-                                        value={field.state.value}
+                                        disabled={!isOwner}
+                                        value={field.state.value === 0 ? "" : field.state.value}
                                         onBlur={field.handleBlur}
-                                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.handleChange(val === "" ? 0 : Number(val));
+                                        }}
                                     />
                                 </div>
                             )}
@@ -369,51 +400,71 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                         <editForm.Field name="estimated_completion_time">
                             {(field) => (
                                 <div className="space-y-2">
-                                    <Label htmlFor="hours">Hours *</Label>
+                                    <Label htmlFor="hours" className="text-sm font-semibold text-gray-700">Hours *</Label>
                                     <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
                                         id="hours"
                                         type="number"
-                                        value={field.state.value}
+                                        disabled={!isOwner}
+                                        value={field.state.value === 0 ? "" : field.state.value}
                                         onBlur={field.handleBlur}
-                                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            field.handleChange(val === "" ? 0 : Number(val));
+                                        }}
                                     />
                                 </div>
                             )}
                         </editForm.Field>
                     </div>
 
-                    {/* Due Date */}
-                    <editForm.Field name="due_date">
-                        {(field) => (
-                            <div className="space-y-2">
-                                <Label htmlFor="due_date">Due Date *</Label>
-                                <Input
-                                    id="due_date"
-                                    type="date"
-                                    value={field.state.value}
-                                    onBlur={field.handleBlur}
-                                    onChange={(e) => field.handleChange(e.target.value)}
-                                />
-                            </div>
-                        )}
-                    </editForm.Field>
+                    <div className="border-t border-gray-200 pt-5 mt-5">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Timeline</h3>
+                        {/* Due Date */}
+                        <editForm.Field name="due_date">
+                            {(field) => (
+                                <div className="space-y-2">
+                                    <Label htmlFor="due_date" className="text-sm font-semibold text-gray-700">Due Date *</Label>
+                                    <Input
+                                        className="border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all"
+                                        id="due_date"
+                                        type="date"
+                                        disabled={!isOwner}
+                                        value={field.state.value}
+                                        onBlur={field.handleBlur}
+                                        onChange={(e) => field.handleChange(e.target.value)}
+                                    />
+                                </div>
+                            )}
+                        </editForm.Field>
+                    </div>
 
                     {/* Assignees Section */}
-                    <div className="pt-4 border-t border-gray-200">
-                        <Label>Task Assignees</Label>
-                        
-                        <div className="mt-2 border border-input rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-white">
+                    <div className="pt-5 border-t border-gray-200 mt-5">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Task Assignees</h3>
+                        {isOwner && (
+                            <p className="text-xs text-gray-500 mb-3">Select team members to assign to this task</p>
+                        )}
+                        {/* Show viewer message if not owner */}
+                        {!isOwner && (
+                            <p className="text-xs text-gray-500 mt-1 mb-2">
+                                Only the task creator can modify assignees.
+                            </p>
+                        )}
+
+                        <div className="mt-3 border border-gray-200 rounded-xl p-4 max-h-48 overflow-y-auto space-y-3 bg-gray-50">
                             {projectMembers.length === 0 ? (
                                 <p className="text-sm text-gray-500">No project members found.</p>
                             ) : (
                                 projectMembers.map((member) => {
                                     const isSelected = formAssignees.some(u => u.id === member.id);
-                                    
+
                                     return (
                                         <div key={member.id} className="flex items-center space-x-2">
-                                            <Checkbox 
+                                            <Checkbox
                                                 id={`assignee-${member.id}`}
                                                 checked={isSelected}
+                                                disabled={!isOwner}
                                                 onCheckedChange={(checked) => {
                                                     if (checked) {
                                                         setFormAssignees([...formAssignees, member]);
@@ -422,9 +473,9 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                                                     }
                                                 }}
                                             />
-                                            <Label 
-                                                htmlFor={`assignee-${member.id}`} 
-                                                className="flex items-center gap-2 text-sm font-normal cursor-pointer w-full"
+                                            <Label
+                                                htmlFor={`assignee-${member.id}`}
+                                                className={`flex items-center gap-2 text-sm font-normal w-full ${isOwner ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
                                             >
                                                 <Avatar className="h-6 w-6">
                                                     <AvatarImage src={member.profile_photo_url} />
@@ -445,17 +496,32 @@ export function EditTaskModal({ task, isOpen, onClose, onSuccess }: EditTaskModa
                     </div>
 
                     {/* Submit Button */}
-                    <div className="flex justify-end gap-2 pt-4 border-t">
-                        <Button type="button" variant="outline" onClick={onClose}>
-                            Cancel
-                        </Button>
+                    <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
                         <Button
-                            type="submit"
-                            disabled={isUpdating}
-                            className="bg-slate-600 hover:bg-slate-700 text-white"
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                            className="rounded-xl border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all"
                         >
-                            {isUpdating ? "Updating..." : "Update Task"}
+                            {isOwner ? "Cancel" : "Close"}
                         </Button>
+                        {isOwner && (
+                            <Button
+                                type="submit"
+                                disabled={isUpdating}
+                                className="bg-gradient-to-r from-blue-600 to-slate-600 hover:from-blue-700 hover:to-slate-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                            >
+                                {isUpdating ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Updating...
+                                    </span>
+                                ) : "Update Task"}
+                            </Button>
+                        )}
                     </div>
                 </form>
             </DialogContent>
